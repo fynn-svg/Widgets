@@ -176,7 +176,7 @@ function boot() {
     startGcal();
     if (!process.env.AW_CAPTURE && cfg.settings.autoUpdateCheck !== false) { setTimeout(updCheck, 8000); setInterval(updCheck, 6 * 3600 * 1000); }
     if (process.env.AW_CAPTURE) startCapture();
-    applyDock(); startDockPolling(); startSchedule();
+    applyDock(); startDockPolling(); applyTopbar(); startSchedule();
     startIcloud(); startScreentime();
   });
 }
@@ -184,8 +184,8 @@ function boot() {
 // ---------- IPC ----------
 ipcMain.handle('cfg:get', () => cfg);
 ipcMain.handle('cfg:patch', (_e, key, value) => {
-  if (!['settings', 'theme', 'layouts', 'templates', 'appTheme', 'ui', 'dock', 'appearance'].includes(key)) return;
-  cfg[key] = value; if (key === 'settings') { applyAutostart(); updateTray(); } if (key === 'dock') applyDock(); if (key === 'appearance') { lastNight = null; scheduleTick(); followWallpaper(); } reconcile(); return cfg;
+  if (!['settings', 'theme', 'layouts', 'templates', 'appTheme', 'ui', 'dock', 'appearance', 'topbar'].includes(key)) return;
+  cfg[key] = value; if (key === 'settings') { applyAutostart(); updateTray(); } if (key === 'dock') applyDock(); if (key === 'topbar' || key === 'theme' || key === 'appTheme') applyTopbar(); if (key === 'appearance') { lastNight = null; scheduleTick(); followWallpaper(); } reconcile(); return cfg;
 });
 ipcMain.handle('widget:add', (_e, w) => {
   const [dw, dh] = SIZES[w.size || 'M'];
@@ -755,6 +755,72 @@ ipcMain.handle('events:add', (_e, ev) => { cfg.events = cfg.events || []; const 
 ipcMain.handle('events:remove', (_e, id) => { cfg.events = (cfg.events || []).filter((x) => x.id !== id); cfg.eventsRev = (cfg.eventsRev || 0) + 1; saveCfg(); broadcast(); return true; });
 
 
+
+// ---------- Shortcut-Leiste am oberen Bildschirmrand ----------
+const TB_DEFAULT = { enabled: false, delay: 250, size: 'normal', clock: true, corner: false,
+  items: ['store', 'toggleWidgets', 'showDesktop', 'explorer', 'downloads', 'calc', 'snip', 'clipboard', 'play', 'mute', 'wifi', 'settings', 'lock'].map((a) => ({ id: 'tb-' + a, kind: 'action', action: a })) };
+const tbCfg = () => ({ ...TB_DEFAULT, ...(cfg.topbar || {}) });
+let tbWin = null, tbShown = false, tbEdgeSince = 0, tbOutSince = 0, tbPoll = null;
+function winCombo(...vks) { if (!WIN) return false; try { vks.forEach((k) => WIN.key(k, 0, 0, 0)); [...vks].reverse().forEach((k) => WIN.key(k, 0, 2, 0)); return true; } catch { return false; } }
+const TB_RUN = {
+  store: () => openMain('store'), widgets: () => openMain('widgets'), appSettings: () => openMain('settings'), toggleWidgets: () => toggleAllHidden(),
+  showDesktop: () => winCombo(0x5B, 0x44), search: () => winCombo(0x5B, 0x53), taskview: () => winCombo(0x5B, 0x09), clipboard: () => winCombo(0x5B, 0x56), emoji: () => winCombo(0x5B, 0xBE),
+  notifications: () => winCombo(0x5B, 0x4E), quick: () => winCombo(0x5B, 0x41), snip: () => shell.openExternal('ms-screenclip:'), lock: () => execFile('rundll32.exe', ['user32.dll,LockWorkStation']),
+  play: () => winCombo(0xB3), next: () => winCombo(0xB0), prev: () => winCombo(0xB1), mute: () => winCombo(0xAD), volup: () => winCombo(0xAF), voldown: () => winCombo(0xAE),
+  explorer: () => spawn('explorer.exe', [], { detached: true, stdio: 'ignore' }).unref(), downloads: () => shell.openPath(app.getPath('downloads')), documents: () => shell.openPath(app.getPath('documents')), pictures: () => shell.openPath(app.getPath('pictures')),
+  calc: () => shell.openExternal('calculator:'), notepad: () => spawn('notepad.exe', [], { detached: true, stdio: 'ignore' }).unref(), taskmgr: () => spawn('taskmgr.exe', [], { detached: true, stdio: 'ignore' }).unref(), terminal: () => shell.openExternal('wt:').catch(() => spawn('cmd.exe', ['/c', 'start', 'powershell'], { detached: true, stdio: 'ignore' }).unref()),
+  settings: () => shell.openExternal('ms-settings:'), wifi: () => shell.openExternal('ms-settings:network-wifi'), bluetooth: () => shell.openExternal('ms-settings:bluetooth'), sound: () => shell.openExternal('ms-settings:sound'), display: () => shell.openExternal('ms-settings:display'), power: () => shell.openExternal('ms-settings:powersleep'),
+  darkmode: () => { const k = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize'; execFile('reg', ['query', k, '/v', 'AppsUseLightTheme'], { windowsHide: true }, (e, out) => { const light = /0x1/.test(String(out)) ? 0 : 1; ['AppsUseLightTheme', 'SystemUsesLightTheme'].forEach((v) => execFile('reg', ['add', k, '/v', v, '/t', 'REG_DWORD', '/d', String(light), '/f'], { windowsHide: true })); }); },
+  trash: () => shell.openExternal('shell:RecycleBinFolder').catch(() => spawn('explorer.exe', ['shell:RecycleBinFolder'], { detached: true, stdio: 'ignore' }).unref()),
+  gcal: () => shell.openExternal('https://calendar.google.com/'), mail: () => shell.openExternal('mailto:'), focusOn: () => { for (const win of widgetWins.values()) win.hide(); allHidden = true; }
+};
+function tbGeo() {
+  const t = tbCfg(), disp = screen.getPrimaryDisplay(), b = disp.bounds, sz = { compact: 62, normal: 76, big: 92 }[t.size] || 76;
+  const n = (t.items || []).length + 1, w = Math.min(b.width - 40, Math.max(360, n * (sz + 4) + (t.clock ? 150 : 0) + 70)), h = sz + 44;
+  return { disp, bounds: { x: Math.round(b.x + (b.width - w) / 2), y: b.y, width: w, height: h } };
+}
+function applyTopbar() {
+  const t = tbCfg();
+  if (!t.enabled) { if (tbWin && !tbWin.isDestroyed()) tbWin.destroy(); tbWin = null; tbShown = false; return; }
+  if (!tbWin || tbWin.isDestroyed()) {
+    tbWin = new BrowserWindow({ frame: false, transparent: true, hasShadow: false, skipTaskbar: true, resizable: false, movable: false, focusable: false, show: false, type: 'toolbar', backgroundColor: '#00000000', webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false } });
+    tbWin.setAlwaysOnTop(true, 'pop-up-menu'); tbWin.loadFile(path.join(__dirname, 'renderer/topbar/topbar.html')); tbWin.on('closed', () => { tbWin = null; tbShown = false; });
+  }
+  tbWin.setBounds(tbGeo().bounds); tbWin.webContents.send('tb:update');
+  if (!tbPoll) tbPoll = setInterval(tbTick, 80);
+}
+function tbShow(on) {
+  if (!tbWin || tbWin.isDestroyed() || tbShown === on) return; tbShown = on;
+  if (on) { tbWin.setBounds(tbGeo().bounds); tbWin.showInactive(); tbWin.moveTop(); tbWin.webContents.send('tb:show', true); }
+  else { tbWin.webContents.send('tb:show', false); setTimeout(() => { if (!tbShown && tbWin && !tbWin.isDestroyed()) tbWin.hide(); }, 220); }
+}
+function tbTick() {
+  if (!tbWin || tbWin.isDestroyed()) return; const t = tbCfg(), p = screen.getCursorScreenPoint(), g = tbGeo(), b = g.bounds, d = g.disp.bounds, now = Date.now();
+  const atEdge = p.y <= d.y + 1 && p.x >= d.x && p.x < d.x + d.width && (t.corner || (p.x >= b.x && p.x <= b.x + b.width));
+  if (!tbShown) { if (atEdge) { if (!tbEdgeSince) tbEdgeSince = now; if (now - tbEdgeSince >= (+t.delay || 0)) { tbEdgeSince = 0; tbOutSince = 0; tbShow(true); } } else tbEdgeSince = 0; return; }
+  const inside = p.x >= b.x - 24 && p.x <= b.x + b.width + 24 && p.y >= b.y && p.y <= b.y + b.height + 24;
+  if (inside) tbOutSince = 0; else { if (!tbOutSince) tbOutSince = now; if (now - tbOutSince > 450) tbShow(false); }
+}
+async function tbState() {
+  const t = tbCfg(), items = [];
+  for (const it of t.items || []) items.push({ ...it, img: it.kind === 'app' ? await dockIcon(it.path).catch(() => null) : null });
+  return { ...t, items, theme: cfg.theme, appTheme: cfg.appTheme, lang: cfg.settings.lang, h12: cfg.settings.h12 };
+}
+ipcMain.handle('tb:get', () => tbState());
+ipcMain.handle('tb:run', (_e, id) => {
+  const it = (tbCfg().items || []).find((x) => x.id === id); if (!it) return false; tbShow(false);
+  try {
+    if (it.kind === 'action') { const f = TB_RUN[it.action]; if (f) f(); }
+    else if (it.kind === 'url' && /^https?:\/\//i.test(it.url || '')) shell.openExternal(it.url);
+    else if (it.kind === 'app' || it.kind === 'folder') shell.openPath(it.path);
+    return true;
+  } catch { return false; }
+});
+ipcMain.handle('tb:preview', () => { if (!tbCfg().enabled) return false; tbShow(true); tbOutSince = Date.now() + 2500; return true; });
+ipcMain.handle('tb:pickApp', async () => { const r = await dialog.showOpenDialog({ properties: ['openFile'], filters: [{ name: 'Programme und Verknüpfungen', extensions: ['exe', 'lnk', 'bat', 'cmd', 'url'] }, { name: 'Alle Dateien', extensions: ['*'] }] }); return r.canceled ? null : { path: r.filePaths[0], name: path.basename(r.filePaths[0]).replace(/\.(lnk|exe|url|bat|cmd)$/i, '') }; });
+ipcMain.handle('tb:icon', (_e, p) => dockIcon(p).catch(() => null));
+app.whenReady().then(() => { screen.on('display-metrics-changed', () => tbWin && applyTopbar()); });
+
 // ---------- System-Update (GitHub Releases) ----------
 const UPDATE_REPO_DEFAULT = (() => { try { return require('./package.json').updateRepo || ''; } catch { return ''; } })();
 const updRepo = () => (cfg.settings.updateRepo || UPDATE_REPO_DEFAULT || '').trim();
@@ -833,6 +899,7 @@ function startCapture() {
       if (mainWin) { mainWin.webContents.send('navigate', pg); await new Promise((r) => setTimeout(r, 2500)); await snap(mainWin, 'page-' + pg.replace(/[^a-z0-9-]/gi, '_')); }
     }
     for (const [id, win] of widgetWins) { const w = find(id); await snap(win, 'w-' + (w ? w.type : id)); }
+    if (tbWin) { tbShow(true); tbOutSince = Date.now() + 9e9; await new Promise((r) => setTimeout(r, 1500)); await snap(tbWin, 'topbar'); }
     app.exit(0);
   }, Number(process.env.AW_CAPTURE_DELAY || 6000));
 }

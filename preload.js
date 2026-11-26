@@ -2,6 +2,8 @@ const { contextBridge, ipcRenderer, webUtils } = require('electron');
 const inv = (c, ...a) => ipcRenderer.invoke(c, ...a);
 contextBridge.exposeInMainWorld('api', {
   getCfg: () => inv('cfg:get'),
+  tbGet: () => inv('tb:get'), tbRun: (id) => inv('tb:run', id), tbPreview: () => inv('tb:preview'), tbPickApp: () => inv('tb:pickApp'), tbIcon: (p) => inv('tb:icon', p),
+  onTb: (fn) => { ipcRenderer.on('tb:update', () => fn('update')); ipcRenderer.on('tb:show', (_e, on) => fn(on ? 'show' : 'hide')); },
   updCheck: () => inv('upd:check'),
   updInfo: () => inv('upd:info'),
   updInstall: () => inv('upd:install'),
