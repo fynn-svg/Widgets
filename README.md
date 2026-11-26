@@ -2,11 +2,17 @@
 
 Widgets im Apple-Stil für den Windows-Desktop. Es gibt über 100 Widgets in einem eigenen Widget Store: Uhren, Wetter, Kalender (Google und iCloud), Aufgaben, Systemanzeigen und vieles mehr. Dazu kommen ein Dock, Designs und Layouts.
 
-## Installieren
+## ⬇️ Software herunterladen
 
-1. Lade unter **Releases** die neueste Datei `AppleWidgets-Setup.exe` herunter.
-2. Starte die Datei. Falls Windows SmartScreen warnt, klicke auf «Weitere Informationen» und dann auf «Trotzdem ausführen».
-3. Die App erscheint im Startmenü und auf dem Desktop.
+### [Apple Widgets für Windows herunterladen](https://github.com/fynn-svg/Widgets/releases/latest/download/AppleWidgets-Setup.exe)
+
+So installierst du die Software:
+
+1. Klicke auf den Link oben und öffne danach die Datei `AppleWidgets-Setup.exe`.
+2. Falls Windows SmartScreen warnt, klicke auf «Weitere Informationen» und dann auf «Trotzdem ausführen».
+3. Klicke auf «Installieren». Die App erscheint danach im Startmenü und auf dem Desktop.
+
+Mehr dazu steht im Ordner [Software](Software/). Alle Versionen findest du unter [Releases](https://github.com/fynn-svg/Widgets/releases).
 
 ## Updates
 
