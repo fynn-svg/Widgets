@@ -1,0 +1,141 @@
+/* ---------- Widgets von Fynn ---------- */
+.fy-fit{position:absolute;inset:0;overflow:hidden}
+.fy{position:absolute;left:50%;top:50%;transform-origin:center;transform:translate(-50%,-50%);width:max-content;color:var(--text);
+ --text3:color-mix(in srgb,var(--text) 45%,transparent);--hover:color-mix(in srgb,var(--text) 10%,transparent);--line:color-mix(in srgb,var(--text) 13%,transparent);
+ --text2:color-mix(in srgb,var(--text) 72%,transparent);font-family:"SF Pro Display","Segoe UI Variable Display","Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.fy button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+.fy:not(.glass){text-shadow:0 2px 14px rgba(0,0,0,.35)}
+.wbody.fy-sky{border-radius:inherit;background:linear-gradient(180deg,#2b6fd1 0%,#4d9be9 100%);color:#fff}
+.wbody.fy-sky[data-sky="cloudy"]{background:linear-gradient(180deg,#4f6d8f 0%,#7f9bb8 100%)}
+.wbody.fy-sky[data-sky="rain"]{background:linear-gradient(180deg,#34465c 0%,#5b6e85 100%)}
+.wbody.fy-sky[data-sky="snow"]{background:linear-gradient(180deg,#6d84a3 0%,#a9bbd0 100%)}
+.wbody.fy-sky[data-sky="night"]{background:linear-gradient(180deg,#0b1630 0%,#26385f 100%)}
+.wbody.fy-sky .fy{--text:#fff;color:#fff}
+@keyframes fyblink{50%{opacity:.35}}
+.fy input, .fy textarea, .fy select, .fy a, .fy .nodrag {-webkit-app-region: no-drag;}
+.fy .icon-btn {width: 26px; height: 26px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--text2); transition: background .15s, color .15s;}
+.fy .icon-btn:hover {background: var(--hover); color: var(--text);}
+.fy .icon-btn svg {width: 16px; height: 16px;}
+.fy input.inline, .fy textarea.inline {font: inherit; color: var(--text); background: var(--hover);
+  border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; outline: none; width: 100%;}
+.fy input.inline:focus, .fy textarea.inline:focus {border-color: var(--accent);}
+.fy.clock {padding: 4px 18px 12px; min-width: 300px;}
+.fy.clock .time {font-size: 118px; line-height: 1; letter-spacing: -2px;
+  font-variant-numeric: tabular-nums; font-weight: 200;
+  white-space: nowrap;}
+.fy.clock:not(.glass) .time {background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.78) 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 3px 12px rgba(0,0,0,0.35));
+  text-shadow: none;}
+.fy.clock.style-bold .time {font-weight: 700; letter-spacing: -3px;}
+.fy.clock.style-mono .time {font-family: "Cascadia Mono", "Consolas", monospace; font-weight: 300; letter-spacing: -4px; font-size: 104px;}
+.fy.clock.style-neon .time {font-weight: 300; color: var(--accent) !important; background: none !important; -webkit-background-clip: border-box !important;
+  filter: none !important;
+  text-shadow: 0 0 8px var(--accent), 0 0 24px var(--accent), 0 0 48px var(--accent) !important;}
+.fy.clock .time .sec {font-size: 0.38em; letter-spacing: 0; margin-left: 6px; opacity: .75;}
+.fy.clock .time .ampm {font-size: 0.24em; letter-spacing: 0; margin-left: 8px; opacity: .75;}
+.fy.clock .colon {animation: fyblink 2s steps(1) infinite;}
+.fy.clock.no-blink .colon {animation: none;}
+.fy.clock .date {white-space: nowrap; font-size: 27px; font-weight: 400; color: var(--text); opacity: .9; margin-top: 8px; padding-left: 4px;}
+.fy.clock .greet {white-space: nowrap; font-size: 21px; font-weight: 400; color: var(--text2); margin-top: 8px; padding-left: 4px;}
+.fy.analog {padding: 16px;}
+.fy.analog svg {display: block; width: 190px; height: 190px; overflow: visible;}
+.fy.analog {color: var(--text);}
+.fy.calendar {padding: 16px 16px 14px; width: 330px;}
+.fy .cal-head {display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; padding: 0 2px 0 4px;}
+.fy .cal-title {font-size: 18px; font-weight: 600;}
+.fy .cal-title .yr {font-weight: 600;}
+.fy .cal-nav {display: flex; gap: 2px;}
+.fy .cal-grid {display: grid; grid-template-columns: repeat(7, 1fr); row-gap: 2px; text-align: center;}
+.fy .cal-dow {font-size: 15px; color: var(--text2); font-weight: 500; padding: 4px 0 8px;}
+.fy .cal-day {font-size: 16px; font-weight: 500; height: 34px; width: 34px; margin: 0 auto; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; position: relative;
+  font-variant-numeric: tabular-nums; transition: background .15s;}
+.fy .cal-day:hover {background: var(--hover);}
+.fy .cal-day.weekend {color: var(--text2);}
+.fy .cal-day.other {color: var(--text3);}
+.fy .cal-day.sel {box-shadow: inset 0 0 0 1.5px var(--text3);}
+.fy .cal-day.today {background: var(--accent); color: #fff; font-weight: 700; box-shadow: none;}
+.fy .cal-day .dot {position: absolute; bottom: 3px; width: 4px; height: 4px; border-radius: 50%; background: var(--accent);}
+.fy .cal-day.today .dot {background: #fff;}
+.fy .cal-events {border-top: 1px solid var(--line); margin-top: 10px; padding-top: 10px;}
+.fy .cal-events-head {display: flex; align-items: center; justify-content: space-between; font-size: 13px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .4px; padding-left: 4px;}
+.fy .cal-ev {display: flex; align-items: center; gap: 8px; font-size: 14px; padding: 5px 4px; border-radius: 8px;}
+.fy .cal-ev .bar {width: 3px; align-self: stretch; border-radius: 2px; background: var(--accent);}
+.fy .cal-ev .t {flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;}
+.fy .cal-ev .icon-btn {opacity: 0; width: 22px; height: 22px;}
+.fy .cal-ev:hover .icon-btn {opacity: 1;}
+.fy .cal-empty {font-size: 13px; color: var(--text3); padding: 6px 4px 2px;}
+.fy .cal-add {margin-top: 6px;}
+.fy.weather {padding: 18px 18px 14px; width: 318px;}
+.fy .w-top {display: flex; gap: 14px; align-items: flex-start;}
+.fy .w-top .big-icon svg {width: 76px; height: 76px;}
+.fy .w-city {font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 4px;}
+.fy .w-city svg {width: 11px; height: 11px;}
+.fy .w-temp {font-size: 46px; font-weight: 500; line-height: 1.05; margin-top: 2px;}
+.fy .w-desc {font-size: 15px; margin-top: 6px;}
+.fy .w-hl {font-size: 14px; color: var(--text2); margin-top: 2px;}
+.fy .w-days {display: grid; grid-template-columns: repeat(5, 1fr); text-align: center; border-top: 1px solid var(--line); margin-top: 14px; padding-top: 12px;}
+.fy .w-day .d {font-size: 13px; font-weight: 600; color: var(--text2);}
+.fy .w-day svg {width: 28px; height: 28px; margin: 4px 0 2px;}
+.fy .w-day .mx {font-size: 15px; font-weight: 600;}
+.fy .w-day .mn {font-size: 13px; color: var(--text2);}
+.fy .w-msg {font-size: 13px; color: var(--text2); padding: 20px 0; text-align: center;}
+.fy.todos {padding: 16px 16px 14px; width: 290px;}
+.fy .t-head {display: flex; align-items: center; gap: 10px; margin-bottom: 8px;}
+.fy .t-head .badge {width: 26px; height: 26px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; flex: none;}
+.fy .t-head .badge svg {width: 15px; height: 15px; color: #fff;}
+.fy .t-head .title {flex: 1; font-size: 18px; font-weight: 600;}
+.fy .t-list {max-height: 360px; overflow-y: auto; -webkit-app-region: no-drag;}
+.fy .t-list::-webkit-scrollbar {width: 0;}
+.fy .t-item {display: flex; align-items: center; gap: 10px; padding: 7px 2px; border-radius: 8px;}
+.fy .t-check {width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--text3); flex: none;
+  display: flex; align-items: center; justify-content: center; transition: all .15s;}
+.fy .t-check:hover {border-color: var(--accent);}
+.fy .t-check svg {width: 13px; height: 13px; color: #fff; opacity: 0;}
+.fy .t-item.done .t-check {background: var(--accent); border-color: var(--accent);}
+.fy .t-item.done .t-check svg {opacity: 1;}
+.fy .t-text {flex: 1; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: text;}
+.fy .t-item.done .t-text {text-decoration: line-through; color: var(--text3);}
+.fy .t-item .icon-btn {opacity: 0; width: 22px; height: 22px;}
+.fy .t-item:hover .icon-btn {opacity: 1;}
+.fy .t-foot {display: flex; align-items: center; gap: 12px; margin-top: 10px; font-size: 13px; color: var(--text2);}
+.fy .t-progress {flex: 1; height: 5px; border-radius: 3px; background: var(--line); overflow: hidden;}
+.fy .t-progress div {height: 100%; background: var(--accent); border-radius: 3px; transition: width .3s;}
+.fy .t-empty {font-size: 14px; color: var(--text3); padding: 8px 2px;}
+.fy.notes {padding: 14px 16px 16px; width: 280px;}
+.fy.notes .n-head {font-size: 16px; font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;}
+.fy.notes .n-head .pin {width: 10px; height: 10px; border-radius: 50%; background: #ffd60a;}
+.fy.notes textarea {width: 100%; height: 170px; resize: none; border: 0; outline: none; background: transparent;
+  font: 15px/1.45 var(--font); color: var(--text);}
+.fy.notes textarea::placeholder {color: var(--text3);}
+.fy.system {padding: 16px 18px; width: 270px;}
+.fy.system .s-head {font-size: 16px; font-weight: 600; margin-bottom: 12px;}
+.fy .s-row {margin-bottom: 12px;}
+.fy .s-row .lbl {display: flex; justify-content: space-between; font-size: 13px; color: var(--text2); margin-bottom: 5px;}
+.fy .s-row .lbl b {color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums;}
+.fy .s-bar {height: 6px; border-radius: 3px; background: var(--line); overflow: hidden;}
+.fy .s-bar div {height: 100%; background: var(--accent); border-radius: 3px; transition: width .6s;}
+.fy .s-foot {font-size: 12px; color: var(--text3);}
+.fy .cal-list {max-height: 150px; overflow-y: auto; -webkit-app-region: no-drag;}
+.fy .cal-list::-webkit-scrollbar {width: 0;}
+.fy .cal-ev.g .bar {background: #34c759;}
+.fy .cal-ev .tm {font-size: 12.5px; color: var(--text2); font-variant-numeric: tabular-nums; min-width: 40px;}
+.wbody.fy-sky {background: linear-gradient(180deg, #2b6fd1 0%, #4d9be9 100%) !important; color: #fff;}
+.wbody.fy-sky[data-sky="cloudy"] {background: linear-gradient(180deg, #4f6d8f 0%, #7f9bb8 100%) !important;}
+.wbody.fy-sky[data-sky="rain"] {background: linear-gradient(180deg, #34465c 0%, #5b6e85 100%) !important;}
+.wbody.fy-sky[data-sky="snow"] {background: linear-gradient(180deg, #6d84a3 0%, #a9bbd0 100%) !important;}
+.wbody.fy-sky[data-sky="night"] {background: linear-gradient(180deg, #0b1630 0%, #26385f 100%) !important;}
+.wbody.fy-sky .w-hl, .wbody.fy-sky .w-day .d, .wbody.fy-sky .w-day .mn {color: rgba(255,255,255,.78);}
+.wbody.fy-sky .w-days {border-top-color: rgba(255,255,255,.22);}
+.fy.weather .w-temp {font-weight: 300; font-size: 52px; letter-spacing: -1px;}
+.fy.calendar .cal-title {font-size: 17px; font-weight: 700; letter-spacing: -.2px;}
+.fy.calendar .cal-dow {font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .3px; color: var(--text3);}
+.fy.calendar .cal-day {font-size: 15px; font-weight: 600;}
+.fy .t-head .count {font-size: 26px; font-weight: 700; color: var(--accent); line-height: 1; margin-right: 2px; font-variant-numeric: tabular-nums;}
+.fy .t-head .title {color: var(--accent);}
+.fy.clock .time{background:none!important;-webkit-background-clip:border-box!important;background-clip:border-box!important;color:var(--text)!important}
+.fy.clock:not(.glass) .time{filter:drop-shadow(0 3px 12px rgba(0,0,0,.35))}
+.fy.clock.style-neon .time{color:var(--accent)!important}

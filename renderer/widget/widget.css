@@ -1,0 +1,8 @@
+html,body{margin:0;height:100%;background:transparent;overflow:hidden}
+.drag,.grip{position:absolute;opacity:0;transition:opacity .15s;z-index:5}
+.drag{top:0;left:0;right:0;height:14px;cursor:move}
+.drag::after{content:"";position:absolute;left:50%;top:5px;width:34px;height:4px;margin-left:-17px;border-radius:2px;background:var(--text);opacity:.45}
+.grip{right:0;bottom:0;width:22px;height:22px;cursor:nwse-resize}
+.grip::after{content:"";position:absolute;right:6px;bottom:6px;width:8px;height:8px;border-right:2px solid var(--text);border-bottom:2px solid var(--text);opacity:.55}
+body:hover .drag,body:hover .grip{opacity:1}
+body.locked .drag,body.locked .grip{display:none}
