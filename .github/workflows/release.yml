@@ -1,0 +1,60 @@
+# Baut automatisch eine neue Version, sobald die Versionsnummer in package.json erhöht wurde.
+name: Release
+
+on:
+  push:
+    branches: [main]
+    paths: [package.json]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Version lesen
+        id: v
+        shell: bash
+        run: |
+          V=$(node -p "require('./package.json').version")
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          if gh release view "v$V" >/dev/null 2>&1; then echo "exists=1" >> "$GITHUB_OUTPUT"; else echo "exists=0" >> "$GITHUB_OUTPUT"; fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        if: steps.v.outputs.exists == '0'
+        with:
+          node-version: 20
+
+      - name: Abhängigkeiten installieren
+        if: steps.v.outputs.exists == '0'
+        run: npm install --no-audit --no-fund
+
+      - name: App bauen
+        if: steps.v.outputs.exists == '0'
+        run: npx electron-builder --win --x64 --publish never
+
+      - name: Installer bauen
+        if: steps.v.outputs.exists == '0'
+        shell: pwsh
+        run: |
+          $mk = "${env:ProgramFiles(x86)}\NSIS\makensis.exe"
+          if (-not (Test-Path $mk)) { choco install nsis -y --no-progress | Out-Null }
+          Push-Location build\nsis
+          & $mk /V2 "/DVERSION=${{ steps.v.outputs.version }}" installer.nsi
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          Pop-Location
+
+      - name: Release veröffentlichen
+        if: steps.v.outputs.exists == '0'
+        shell: bash
+        run: |
+          NOTES=$(git log -1 --pretty=%B)
+          gh release create "v${{ steps.v.outputs.version }}" dist/AppleWidgets-Setup.exe --title "Apple Widgets ${{ steps.v.outputs.version }}" --notes "$NOTES"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

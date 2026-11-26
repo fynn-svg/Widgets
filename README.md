@@ -20,10 +20,7 @@ npm start            # App starten
 ./build.sh           # Installer bauen -> dist/AppleWidgets-Setup.exe
 ```
 
-Eine neue Version veröffentlichst du so:
-
-1. Erhöhe `version` in `package.json`, zum Beispiel auf 1.4.0.
-2. Führe `./release.sh "Was ist neu"` aus. Das Skript baut den Installer, setzt den Git-Tag `v1.4.0` und erstellt ein GitHub-Release mit `AppleWidgets-Setup.exe`.
+Eine neue Version veröffentlichst du so: Erhöhe `version` in `package.json`, zum Beispiel auf 1.4.0, und pushe auf `main`. Die erste Zeile der Commit-Nachricht wird zur Überschrift der Update-Notizen. GitHub Actions baut dann unter Windows automatisch den Installer und veröffentlicht das Release `v1.4.0` mit `AppleWidgets-Setup.exe`. Kurz danach zeigt die App das Update an.
 
 Die App vergleicht ihre eigene Version mit dem neuesten Release. Die Quelle steht unter `updateRepo` in `package.json`.
 
