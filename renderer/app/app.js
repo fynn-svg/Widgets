@@ -424,12 +424,12 @@ PAGES.home = (m) => {
   const wl = $('#hwl');
   if (!vis.length) wl.append(h('<div class="dim" style="padding:10px 2px">Noch keine Widgets auf dem Desktop. Hol dir welche im Widget Store.</div>'));
   vis.slice(0, 8).forEach((w) => { const e = h(`<div class="hm-wi"><div class="hm-pv"></div><b>${esc(nameOf(w))}</b></div>`); $('.hm-pv', e).append(preview(w.type, w.w, w.h, mergedTheme(w), w.props || {}, w.data || {}, 180, 110)); e.onclick = () => { selId = w.id; go('widgets'); }; wl.append(e); });
-  [['🛍️', 'Widget Store', 'Über 100 Widgets', 'store'], ['🎨', 'Designs', 'Farben, Glas, Schrift', 'designs'], ['🖥️', 'Desktop & Dock', 'Layouts und Dock', 'layouts'], ['⚙️', 'Einstellungen', 'Alles einstellen', 'settings']]
-    .forEach(([i, a, b, p]) => { const e = h(`<div class="hm-qi"><span>${i}</span><div><b>${a}</b><small>${b}</small></div></div>`); e.onclick = () => go(p); $('#hq').append(e); });
+  [['⌨️', 'Shortcut-Leiste', 'Leiste am oberen Rand', 'tbsettings'], ['🛍️', 'Widget Store', 'Über 100 Widgets', 'store'], ['🎨', 'Designs', 'Farben, Glas, Schrift', 'designs'], ['🖥️', 'Desktop & Dock', 'Layouts und Dock', 'layouts'], ['⚙️', 'Einstellungen', 'Alles einstellen', 'settings']]
+    .forEach(([i, a, b, p]) => { const e = h(`<div class="hm-qi"><span>${i}</span><div><b>${a}</b><small>${b}</small></div></div>`); e.onclick = () => { if (p === 'tbsettings') { pkState.setTab = 'topbar'; return go('settings'); } go(p); }; $('#hq').append(e); });
 };
 
 PAGES.settings = (m) => {
-  const TABS = [['general', 'Allgemein', '⚙️'], ['update', 'Software-Update', '⬆️'], ['look', 'Darstellung', '🎨'], ['desktop', 'Widgets & Desktop', '🖥️'], ['units', 'Wetter & Einheiten', '🌤️'], ['accounts', 'Kalender & Konten', '📅'], ['data', 'Daten & Sicherung', '💾'], ['about', 'Über', 'ℹ️']];
+  const TABS = [['general', 'Allgemein', '⚙️'], ['update', 'Software-Update', '⬆️'], ['topbar', 'Shortcut-Leiste', '⌨️'], ['look', 'Darstellung', '🎨'], ['desktop', 'Widgets & Desktop', '🖥️'], ['units', 'Wetter & Einheiten', '🌤️'], ['accounts', 'Kalender & Konten', '📅'], ['data', 'Daten & Sicherung', '💾'], ['about', 'Über', 'ℹ️']];
   const tab = pkState.setTab || 'general';
   m.innerHTML = `<h2>${t('st.title')}</h2><p class="sub">Alles an einem Ort. Änderungen werden sofort gespeichert.</p><div class="set"><div class="set-n" id="sn"></div><div class="set-b" id="sb"></div></div>`;
   TABS.forEach(([k, l, i]) => { const e = h(`<div class="set-i ${k === tab ? 'on' : ''}"><span>${i}</span>${l}${k === 'update' && cfg.update && cfg.update.available ? '<em class="bdg">1</em>' : ''}</div>`); e.onclick = () => { pkState.setTab = k; go('settings'); }; $('#sn').append(e); });
@@ -459,6 +459,46 @@ PAGES.settings = (m) => {
     srow(g, 'Automatisch nach Updates suchen', 'Beim Start und alle 6 Stunden', tg(S.autoUpdateCheck !== false, (v) => setS({ autoUpdateCheck: v })));
     const rp = h(`<input type="text" placeholder="besitzer/repository" value="${esc(S.updateRepo || '')}" style="width:220px">`); rp.onchange = () => setS({ updateRepo: rp.value.trim() });
     srow(g, 'Update-Quelle', 'Leer lassen für die Standard-Quelle', rp);
+  }
+  if (tab === 'topbar') {
+    const TBD = { enabled: false, delay: 250, size: 'normal', clock: true, corner: false, items: ['store', 'toggleWidgets', 'showDesktop', 'explorer', 'downloads', 'calc', 'snip', 'clipboard', 'play', 'mute', 'wifi', 'settings', 'lock'].map((a) => ({ id: 'tb-' + a, kind: 'action', action: a })) };
+    const tb = { ...TBD, ...structuredClone(cfg.topbar || {}) }; tb.items = tb.items || [];
+    const save = async (redraw = true) => { cfg.topbar = structuredClone(tb); await api.patch('topbar', cfg.topbar); if (redraw) { const sc = $('#main').scrollTop; go('settings'); $('#main').scrollTop = sc; } };
+    B.append(h('<div class="tb-hero"><div class="tb-demo"><div class="tb-edge"></div><div class="tb-mini"><i>🕒</i><i>🛍️</i><i>📁</i><i>✂️</i><i>⏯️</i><i>🔒</i></div><div class="tb-cur">↑</div></div><div><b>Shortcut-Leiste</b><div class="dim" style="font-size:13px;margin-top:4px;line-height:1.45">Fahre mit der Maus ganz an den oberen Bildschirmrand. Dann gleitet eine Leiste mit deinen Lieblings-Funktionen herunter. Geht die Maus weg, verschwindet sie wieder.</div></div></div>'));
+    let g = group(B, 'Allgemein');
+    srow(g, 'Shortcut-Leiste aktivieren', 'Erscheint am oberen Rand des Hauptbildschirms', tg(tb.enabled, (v) => { tb.enabled = v; save(); }));
+    if (tb.enabled) srow(g, 'Ausprobieren', 'Zeigt die Leiste jetzt kurz an', btn('Leiste zeigen', () => api.tbPreview()));
+    srow(g, 'Verzögerung', 'Wie lange die Maus am Rand sein muss', seg([[0, 'Sofort'], [250, 'Kurz'], [500, 'Mittel'], [900, 'Lang']], tb.delay, (v) => { tb.delay = +v; save(false); }));
+    srow(g, 'Auslösen', 'Wo am oberen Rand die Leiste erscheint', seg([['false', 'Nur in der Mitte'], ['true', 'Ganzer Rand']], String(!!tb.corner), (v) => { tb.corner = v === 'true'; save(false); }));
+    srow(g, 'Grösse', '', seg([['compact', 'Kompakt'], ['normal', 'Normal'], ['big', 'Gross']], tb.size, (v) => { tb.size = v; save(false); }));
+    srow(g, 'Uhr und Datum anzeigen', 'Links in der Leiste', tg(tb.clock, (v) => { tb.clock = v; save(false); }));
+    // Knöpfe der Leiste
+    const lb = group(B, `In der Leiste (${tb.items.length})`, 'Mit ↑ und ↓ sortieren. Unten weitere Funktionen hinzufügen.');
+    if (!tb.items.length) lb.append(h('<div class="dim" style="padding:14px 16px">Noch keine Knöpfe. Füge unten welche hinzu.</div>'));
+    tb.items.forEach((it, i) => {
+      const f = tbItemInfo(it), kind = { action: 'Funktion', app: 'Programm', folder: 'Ordner', url: 'Webseite' }[it.kind];
+      const nm = h(`<input type="text" value="${esc(it.name || '')}" placeholder="${esc(f.name)}" style="width:150px">`); nm.onchange = () => { it.name = nm.value.trim(); save(false); };
+      const r = srow(lb, `<span class="tb-ic">${esc(f.icon)}</span>${esc(f.name)}`, kind + (it.url ? ' · ' + esc(it.url) : it.path ? ' · ' + esc(it.path) : ''), [nm,
+        btn('↑', () => { if (i) { [tb.items[i - 1], tb.items[i]] = [tb.items[i], tb.items[i - 1]]; save(); } }), btn('↓', () => { if (i < tb.items.length - 1) { [tb.items[i + 1], tb.items[i]] = [tb.items[i], tb.items[i + 1]]; save(); } }),
+        btn('✕', () => { tb.items.splice(i, 1); save(); }, 'dg')]);
+      r.classList.add('tb-row');
+    });
+    // Hinzufügen
+    const ab = group(B, 'Funktionen hinzufügen', 'Klicke auf eine Funktion, um sie hinten an die Leiste anzuhängen.');
+    const have = new Set(tb.items.filter((x) => x.kind === 'action').map((x) => x.action)), groups = {};
+    Object.entries(TB_ACTIONS).forEach(([k, [ic, nm, gr]]) => (groups[gr] = groups[gr] || []).push([k, ic, nm]));
+    Object.entries(groups).forEach(([gr, list]) => {
+      const wrap = h(`<div class="tb-add"><div class="tb-ag">${gr}</div><div class="tb-chips"></div></div>`);
+      list.forEach(([k, ic, nm]) => { const c = h(`<button class="${have.has(k) ? 'on' : ''}" title="${have.has(k) ? 'Schon in der Leiste' : 'Hinzufügen'}"><span>${ic}</span>${nm}${have.has(k) ? ' ✓' : ''}</button>`); c.onclick = () => { if (have.has(k)) return; tb.items.push({ id: 'tb-' + k + '-' + Date.now().toString(36), kind: 'action', action: k }); save(); }; $('.tb-chips', wrap).append(c); });
+      ab.append(wrap);
+    });
+    const own = group(B, 'Eigene Knöpfe');
+    srow(own, '🚀 Programm', 'Eine App oder Verknüpfung (.exe, .lnk)', btn('Programm wählen …', async () => { const r = await api.tbPickApp(); if (r) { tb.items.push({ id: 'tb-app-' + Date.now().toString(36), kind: 'app', path: r.path, name: r.name }); save(); } }));
+    srow(own, '📂 Ordner', 'Öffnet einen Ordner im Explorer', btn('Ordner wählen …', async () => { const p = await api.pickFolder(); if (p) { tb.items.push({ id: 'tb-dir-' + Date.now().toString(36), kind: 'folder', path: p, name: p.split(/[\\/]/).filter(Boolean).pop() }); save(); } }));
+    const un = h('<input type="text" placeholder="Name, z. B. YouTube" style="width:150px">'), uu = h('<input type="text" placeholder="https://…" style="width:200px">');
+    srow(own, '🌐 Webseite', 'Öffnet eine Webseite im Browser', [un, uu, btn('Hinzufügen', () => { let u = uu.value.trim(); if (!u) return; if (!/^https?:\/\//i.test(u)) u = 'https://' + u; tb.items.push({ id: 'tb-url-' + Date.now().toString(36), kind: 'url', url: u, name: un.value.trim() || u.replace(/^https?:\/\/(www\.)?/i, '').split('/')[0] }); save(); }, 'p')]);
+    const rs = group(B, '');
+    srow(rs, 'Auf Standard zurücksetzen', 'Stellt die ursprünglichen Knöpfe wieder her', btn('Zurücksetzen', () => { tb.items = structuredClone(TBD.items); save(); }));
   }
   if (tab === 'look') {
     const at = () => ({ ...(cfg.appTheme || { mode: 'dark', accent: '#0a84ff' }) });
@@ -667,7 +707,7 @@ api.onCfg((c) => {
   if (page === 'iphone' && !typing) return go('iphone');
   if (!typing && ['home', 'widgets', 'layouts', 'settings'].includes(page)) { const sc = $('#main').scrollTop; go(page); $('#main').scrollTop = sc; $('#main').classList.remove('fade'); }
 });
-api.onNavigate((p) => go(p));
+api.onNavigate((p) => { if (p === 'tbsettings') { pkState.setTab = 'topbar'; return go('settings'); } go(p); });
 // Fensterknöpfe (rot/gelb/grün) – steuern nur dieses Fenster
 ['r:close', 'y:min', 'g:max'].forEach((x) => { const [k, a] = x.split(':'); const b = document.getElementById('tl-' + k); if (b) b.onclick = (e) => api.winCtl(a === 'max' && e.altKey ? 'full' : a); });
 api.onWinState((st) => document.body.classList.toggle('maxed', st.max || st.full));
