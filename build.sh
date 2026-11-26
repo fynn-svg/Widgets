@@ -8,3 +8,4 @@ npx electron-builder --win --x64
 NSIS=${NSISDIR:-$HOME/.cache/electron-builder/nsis/nsis-3.0.4.1}
 (cd build/nsis && NSISDIR=$NSIS $NSIS/linux/makensis -V2 -DVERSION=$V installer.nsi)
 echo "Fertig: dist/AppleWidgets-Setup.exe (Version $V)"
+node build/check.js
