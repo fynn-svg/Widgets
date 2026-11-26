@@ -33,6 +33,15 @@ try {
 function pushBottom(win) { // Widget unter alle anderen Fenster legen (Desktop-Modus)
   try { if (WIN && !win.isDestroyed()) WIN.setPos(Number(win.getNativeWindowHandle().readBigUInt64LE(0)), 1, 0, 0, 0, 0, 0x13); } catch {}
 }
+// ---------- Gäste-Modus: gesperrte Funktionen ----------
+let lockUnlocked = false;
+const isLocked = () => !!(cfg && cfg.lock && cfg.lock.enabled && cfg.lock.hash && !lockUnlocked);
+const LOCK_BLOCK = new Set(['widget:add', 'widget:update', 'widget:remove', 'widget:duplicate', 'widget:toDisplay', 'widgets:allOnTop', 'widgets:allVisible', 'layout:save', 'layout:apply',
+  'drag:begin', 'widget:menu', 'autostart:set', 'app:reset', 'app:openData', 'cfg:import', 'cfg:export', 'icloud:connect', 'icloud:disconnect', 'gcal:set', 'gcal:sync',
+  'dock:reorder', 'dock:remove', 'dock:addPath', 'dock:pickApp', 'dock:itemMenu', 'tb:pickApp', 'upd:install', 'focus:set', 'pick:folder', 'pick:image']);
+{ const _h = ipcMain.handle.bind(ipcMain), _o = ipcMain.on.bind(ipcMain);
+  ipcMain.handle = (ch, fn) => _h(ch, (e, ...a) => (LOCK_BLOCK.has(ch) && isLocked() ? null : fn(e, ...a)));
+  ipcMain.on = (ch, fn) => _o(ch, (e, ...a) => { if (LOCK_BLOCK.has(ch) && isLocked()) return; return fn(e, ...a); }); }
 const WPS = require('./renderer/shared/sizes.js'); const SIZES = WPS.dims;
 
 const DEFAULTS = {
@@ -72,7 +81,8 @@ process.on('uncaughtException', (e) => logErr('uncaughtException', e));
 process.on('unhandledRejection', (e) => logErr('unhandledRejection', e));
 const find = (id) => cfg.widgets.find((w) => w.id === id);
 const allWins = () => [mainWin, ...widgetWins.values()].filter((w) => w && !w.isDestroyed());
-const broadcast = () => allWins().forEach((w) => w.webContents.send('cfg', cfg));
+const pubCfg = () => ({ ...cfg, lock: { enabled: !!(cfg.lock && cfg.lock.enabled), allow: (cfg.lock && cfg.lock.allow) || {} } }); // PIN-Hash bleibt im Hauptprozess
+const broadcast = () => { const c = pubCfg(); allWins().forEach((w) => w.webContents.send('cfg', c)); };
 
 function ensureVisible(w) {
   const ds = screen.getAllDisplays();
@@ -131,6 +141,7 @@ function openMain(page) {
   });
   mainWin.loadFile(path.join(__dirname, 'renderer/app/index.html'), { hash: page || 'home' });
   mainWin.once('ready-to-show', () => mainWin.show());
+  mainWin.on('closed', () => { mainWin = null; if (lockUnlocked) { lockUnlocked = false; lockApply(); } });
   const st = () => { if (mainWin && !mainWin.isDestroyed()) mainWin.webContents.send('win:state', { max: mainWin.isMaximized(), full: mainWin.isFullScreen() }); };
   ['maximize', 'unmaximize', 'enter-full-screen', 'leave-full-screen'].forEach((ev) => mainWin.on(ev, st));
   mainWin.on('closed', () => { mainWin = null; });
@@ -152,6 +163,12 @@ function applyAutostart() {
 const tt = (k) => (globalThis.LOCALES[cfg.settings.lang] || globalThis.LOCALES.de)[k] || k;
 function updateTray() {
   if (!tray) return;
+  if (isLocked()) return tray.setContextMenu(Menu.buildFromTemplate([
+    { label: 'Jafy Widgets öffnen', click: () => openMain('home') },
+    { label: tt('tray.hide'), click: toggleAllHidden },
+    { type: 'separator' },
+    { label: '🔒 Entsperren …', click: () => openMain('unlock') }
+  ]));
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: tt('tray.settings'), click: () => openMain('settings') },
     { label: tt('tray.add'), click: () => openMain('store') },
@@ -185,16 +202,18 @@ function boot() {
     startGcal();
     if (!process.env.AW_CAPTURE && cfg.settings.autoUpdateCheck !== false) { setTimeout(updCheck, 8000); setInterval(updCheck, 6 * 3600 * 1000); }
     if (process.env.AW_CAPTURE) startCapture();
-    applyDock(); startDockPolling(); applyTopbar(); startSchedule();
+    applyDock(); startDockPolling(); applyTopbar(); startSchedule(); clipEnsure(cfg.settings); lockApply();
     startIcloud(); startScreentime();
   });
 }
 
 // ---------- IPC ----------
-ipcMain.handle('cfg:get', () => cfg);
+ipcMain.handle('cfg:get', () => pubCfg());
 ipcMain.handle('cfg:patch', (_e, key, value) => {
   if (!['settings', 'theme', 'layouts', 'templates', 'appTheme', 'ui', 'dock', 'appearance', 'topbar'].includes(key)) return;
-  cfg[key] = value; if (key === 'settings') { applyAutostart(); updateTray(); } if (key === 'dock') applyDock(); if (key === 'topbar' || key === 'theme' || key === 'appTheme') applyTopbar(); if (key === 'appearance') { lastNight = null; scheduleTick(); followWallpaper(); } reconcile(); return cfg;
+  if (isLocked() && key !== 'ui') return pubCfg();
+  if (key === 'settings') clipEnsure(value);
+  cfg[key] = value; if (key === 'settings') { applyAutostart(); updateTray(); } if (key === 'dock') applyDock(); if (key === 'topbar' || key === 'theme' || key === 'appTheme') applyTopbar(); if (key === 'appearance') { lastNight = null; scheduleTick(); followWallpaper(); } reconcile(); return pubCfg();
 });
 ipcMain.handle('widget:add', (_e, w) => {
   const [dw, dh] = SIZES[w.size || 'M'];
@@ -248,7 +267,7 @@ ipcMain.on('drag:move', () => {
 ipcMain.on('drag:end', () => {
   if (!drag) return; const w = find(drag.id), win = widgetWins.get(drag.id);
   if (w && win) { const b = win.getBounds(); w.x = b.x; w.y = b.y; w.w = b.width; w.h = b.height; if (drag.mode === 'resize') { w.base = [b.width, b.height]; w.scale = 1; } }
-  drag = null; saveCfg(); if (mainWin && !mainWin.isDestroyed()) mainWin.webContents.send('cfg', cfg);
+  drag = null; saveCfg(); if (mainWin && !mainWin.isDestroyed()) mainWin.webContents.send('cfg', pubCfg());
 });
 ipcMain.on('widget:menu', (_e, id) => {
   const w = find(id); if (!w) return; const lang = cfg.settings.lang || 'de', nm = WPS.names[lang] || WPS.names.de;
@@ -293,7 +312,7 @@ ipcMain.handle('app:openData', () => shell.openPath(app.getPath('userData')));
 ipcMain.handle('app:reset', async () => {
   const r = await dialog.showMessageBox({ type: 'warning', buttons: ['Abbrechen', 'Alles zurücksetzen'], defaultId: 0, message: 'Alle Widgets, Designs und Layouts löschen?' });
   if (r.response !== 1) return false;
-  cfg = structuredClone(DEFAULTS); reconcile(); return true;
+  cfg = { ...structuredClone(DEFAULTS), runtime: cfg.runtime }; lockUnlocked = false; reconcile(); lockApply(); return true;
 });
 
 // ---------- iCloud ----------
@@ -719,7 +738,8 @@ ipcMain.handle('perf:get', () => {
 
 // ---------- Zwischenablage-Verlauf (nur im Arbeitsspeicher) ----------
 let clipHist = [], clipTimer = null, clipAsk = 0, lastClip = '';
-function clipTick() { try { const t = clipboard.readText(); if (t && t !== lastClip && t.length <= 4000 && t.trim()) { lastClip = t; clipHist = [t, ...clipHist.filter((x) => x !== t)].slice(0, 25); } } catch { } if (Date.now() - clipAsk > 30000) { clearInterval(clipTimer); clipTimer = null; } }
+function clipTick() { try { const t = clipboard.readText(); if (t && t !== lastClip && t.length <= 4000 && t.trim()) { lastClip = t; clipHist = [t, ...clipHist.filter((x) => x !== t)].slice(0, 50); } } catch { } if (Date.now() - clipAsk > 30000 && !(cfg && cfg.settings.clipHistory)) { clearInterval(clipTimer); clipTimer = null; } }
+function clipEnsure(st) { if (st && st.clipHistory && !clipTimer) { clipTick(); clipTimer = setInterval(clipTick, 1000); } }
 ipcMain.handle('clip:get', () => { clipAsk = Date.now(); if (!clipTimer) { clipTick(); clipTimer = setInterval(clipTick, 1000); } return clipHist; });
 ipcMain.handle('clip:copy', (_e, t) => { lastClip = String(t); clipboard.writeText(String(t)); clipHist = [String(t), ...clipHist.filter((x) => x !== t)].slice(0, 25); return true; });
 ipcMain.handle('clip:remove', (_e, t) => { clipHist = clipHist.filter((x) => x !== t); return clipHist; });
@@ -813,13 +833,13 @@ function tbTick() {
 async function tbState() {
   const t = tbCfg(), items = [];
   for (const it of t.items || []) items.push({ ...it, img: it.kind === 'app' ? await dockIcon(it.path).catch(() => null) : null });
-  return { ...t, items, theme: cfg.theme, appTheme: cfg.appTheme, lang: cfg.settings.lang, h12: cfg.settings.h12 };
+  return { ...t, items, theme: cfg.theme, appTheme: cfg.appTheme, lang: cfg.settings.lang, h12: cfg.settings.h12, locked: isLocked() };
 }
 ipcMain.handle('tb:get', () => tbState());
 ipcMain.handle('tb:run', (_e, id) => {
   const it = (tbCfg().items || []).find((x) => x.id === id); if (!it) return false; tbShow(false);
   try {
-    if (it.kind === 'action') { const f = TB_RUN[it.action]; if (f) f(); }
+    if (it.kind === 'action') { const f = TB_RUN[it.action] || (/^tool_\w+$/.test(it.action) ? () => openMain('tool:' + it.action.slice(5)) : null); if (f) f(); }
     else if (it.kind === 'url' && /^https?:\/\//i.test(it.url || '')) shell.openExternal(it.url);
     else if (it.kind === 'app' || it.kind === 'folder') shell.openPath(it.path);
     return true;
@@ -912,3 +932,39 @@ function startCapture() {
     app.exit(0);
   }, Number(process.env.AW_CAPTURE_DELAY || 6000));
 }
+
+// ---------- Werkzeuge ----------
+ipcMain.handle('tool:copyImage', (_e, url) => { try { clipboard.writeImage(nativeImage.createFromDataURL(String(url))); return true; } catch { return false; } });
+ipcMain.handle('tool:savePng', async (_e, url, name) => {
+  const m = /^data:image\/(png|gif|jpeg);base64,(.+)$/.exec(String(url)); if (!m) return false;
+  const r = await dialog.showSaveDialog(mainWin, { defaultPath: path.join(app.getPath('downloads'), name || 'bild.png'), filters: [{ name: 'Bild', extensions: [m[1] === 'jpeg' ? 'jpg' : m[1]] }] });
+  if (r.canceled || !r.filePath) return false; fs.writeFileSync(r.filePath, Buffer.from(m[2], 'base64')); return true;
+});
+ipcMain.handle('tool:sys', () => {
+  const net = []; for (const [name, list] of Object.entries(os.networkInterfaces())) for (const a of list || []) if (a.family === 'IPv4' && !a.internal) net.push({ name, ip: a.address });
+  const c = os.cpus();
+  return { host: os.hostname(), os: (os.version ? os.version() : os.type()) + ' (' + os.release() + ', ' + os.arch() + ')', cpu: (c[0] && c[0].model || '').trim(), cores: c.length, memTotal: os.totalmem(), memFree: os.freemem(), uptime: os.uptime(), user: (() => { try { return os.userInfo().username; } catch { return ''; } })(), net, app: app.getVersion() };
+});
+
+// ---------- Gäste-Modus (PIN) ----------
+const pinHash = (pin, salt) => crypto.scryptSync(String(pin), salt, 32).toString('hex');
+const pinOk = (pin) => { const l = cfg.lock || {}; if (!l.hash || !l.salt) return false; try { return crypto.timingSafeEqual(Buffer.from(pinHash(pin, l.salt), 'hex'), Buffer.from(l.hash, 'hex')); } catch { return false; } };
+let pinFails = 0, pinWaitUntil = 0;
+function lockApply() { cfg.runtime = { ...(cfg.runtime || {}), locked: isLocked(), lockOn: !!(cfg.lock && cfg.lock.enabled) }; updateTray(); if (tbWin && !tbWin.isDestroyed()) tbWin.webContents.send('tb:update'); broadcast(); }
+const LOCK_ALLOW_DEFAULT = { tools: true, tasks: true, widgetsToggle: true };
+ipcMain.handle('lock:setup', (_e, pin, allow) => {
+  if (isLocked() || !/^\d{4,8}$/.test(String(pin))) return false;
+  const salt = crypto.randomBytes(16).toString('hex');
+  cfg.lock = { enabled: true, salt, hash: pinHash(pin, salt), allow: { ...LOCK_ALLOW_DEFAULT, ...(allow || {}) } };
+  lockUnlocked = false; saveCfg(); lockApply(); return true;
+});
+ipcMain.handle('lock:unlock', (_e, pin) => {
+  if (Date.now() < pinWaitUntil) return { ok: false, wait: Math.ceil((pinWaitUntil - Date.now()) / 1000) };
+  if (pinOk(pin)) { pinFails = 0; lockUnlocked = true; lockApply(); return { ok: true }; }
+  pinFails++; if (pinFails >= 5) { pinWaitUntil = Date.now() + 30000 * Math.min(pinFails - 4, 10); }
+  return { ok: false, wait: Date.now() < pinWaitUntil ? Math.ceil((pinWaitUntil - Date.now()) / 1000) : 0 };
+});
+ipcMain.handle('lock:relock', () => { if (!(cfg.lock && cfg.lock.enabled)) return false; lockUnlocked = false; lockApply(); if (mainWin && !mainWin.isDestroyed()) mainWin.webContents.send('navigate', 'home'); return true; });
+ipcMain.handle('lock:allow', (_e, allow) => { if (isLocked() || !cfg.lock) return false; cfg.lock.allow = { ...LOCK_ALLOW_DEFAULT, ...(allow || {}) }; saveCfg(); lockApply(); return true; });
+ipcMain.handle('lock:changePin', (_e, pin) => { if (isLocked() || !cfg.lock || !/^\d{4,8}$/.test(String(pin))) return false; cfg.lock.salt = crypto.randomBytes(16).toString('hex'); cfg.lock.hash = pinHash(pin, cfg.lock.salt); saveCfg(); return true; });
+ipcMain.handle('lock:disable', () => { if (isLocked()) return false; cfg.lock = { enabled: false }; lockUnlocked = false; saveCfg(); lockApply(); return true; });

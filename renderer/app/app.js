@@ -17,10 +17,12 @@ const ICON = {
   designs: '<circle cx="12" cy="12" r="9"/><circle cx="8" cy="10" r="1.2"/><circle cx="12" cy="7" r="1.2"/><circle cx="16" cy="10" r="1.2"/><path d="M12 21c-2 0-2-2 0-3 2-1 3-3 1-4"/>',
   layouts: '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>',
   iphone: '<rect x="7" y="2" width="10" height="20" rx="3"/><path d="M11 18h2"/>',
+  tools: '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/>',
+  unlock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
   settings: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/>'
 };
 const ico = (k) => `<svg class="ni" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICON[k] || ''}</svg>`;
-const NAV = [['', ['home', 'store']], ['Meine Sachen', ['widgets', 'tasks', 'iphone']], ['Gestalten', ['designs', 'layouts', 'custom']], ['', ['settings']]];
+const NAV = [['', ['home', 'store', 'tools']], ['Meine Sachen', ['widgets', 'tasks', 'iphone']], ['Gestalten', ['designs', 'layouts', 'custom']], ['', ['settings']]];
 const NAV_ON = { sw: 'store', apple: 'store', extra: 'store', fynn: 'store', editor: 'custom' };
 
 const APPLE_COLORS = [['Blau (Standard)', '#0a84ff'], ['Violett', '#bf5af2'], ['Pink', '#ff375f'], ['Rot', '#ff453a'], ['Orange', '#ff9f0a'], ['Gelb', '#ffd60a'], ['Grün', '#30d158'], ['Graphit', '#8e8e93']];
@@ -29,14 +31,23 @@ function applyAppTheme() {
   const t = cfg.appTheme || { mode: 'dark', accent: '#0a84ff' }, r = document.documentElement, { r: R, g, b } = hexRgb(t.accent);
   r.dataset.mode = t.mode; r.style.setProperty('--a', t.accent); r.style.setProperty('--ai', (R * 299 + g * 587 + b * 114) / 1000 > 170 ? '#1d1d1f' : '#ffffff');
 }
+// Gäste-Modus: welche Seiten ohne PIN erlaubt sind
+const isLocked = () => !!(cfg && cfg.runtime && cfg.runtime.locked);
+const guestPages = () => { const a = (cfg.lock && cfg.lock.allow) || {}; return ['home', 'unlock', ...(a.tools !== false ? ['tools'] : []), ...(a.tasks !== false ? ['tasks'] : [])]; };
 function go(p) {
   if (cfg) { applyAppTheme(); applyLang(); }
-  const [k, id] = p.split(':'); page = k; if (id) { selId = id; api.patch('ui', { ...(cfg.ui || {}), selId: id }); }
+  if (/^tool:/.test(p)) { pkState.tool = p.slice(5); p = 'tools'; }
+  let [k, id] = p.split(':');
+  if (isLocked() && !guestPages().includes(k)) { if (k !== 'home') pkState.afterUnlock = p; k = 'unlock'; id = null; }
+  if (!isLocked() && k === 'unlock') k = 'home';
+  page = k; if (id) { selId = id; api.patch('ui', { ...(cfg.ui || {}), selId: id }); }
   cleanups.forEach((f) => { try { f && f(); } catch {} }); cleanups = [];
-  $('#nav').innerHTML = `<button class="addw" id="addw">${t('nav.add')}</button>`;
-  $('#addw').onclick = () => go('store');
+  const L = isLocked();
+  $('#nav').innerHTML = L ? '<div class="guest-b">👥 Gäste-Modus</div>' : `<button class="addw" id="addw">${t('nav.add')}</button>`;
+  if (!L) $('#addw').onclick = () => go('store');
   const cur = NAV_ON[page] || page;
-  NAV.forEach(([title, keys], gi) => { if (gi === NAV.length - 1) $('#nav').append(h('<div class="nav-sp"></div>')); else if (title) $('#nav').append(h(`<div class="nav-t">${title}</div>`));
+  const NV = L ? [['', guestPages().filter((x) => x !== 'unlock')], ['', ['unlock']]] : NAV;
+  NV.forEach(([title, keys], gi) => { if (gi === NV.length - 1) $('#nav').append(h('<div class="nav-sp"></div>')); else if (title) $('#nav').append(h(`<div class="nav-t">${title}</div>`));
     keys.forEach((key) => { const a = h(`<a class="${key === cur ? 'on' : ''}">${ico(key)}<span>${t('nav.' + key)}</span>${key === 'settings' && cfg.update && cfg.update.available ? '<em class="bdg">1</em>' : ''}</a>`); a.onclick = () => go(key); $('#nav').append(a); }); });
   const m = $('#main'); m.innerHTML = ''; m.scrollTop = 0; m.classList.remove('fade'); void m.offsetWidth; m.classList.add('fade');
   try { (PAGES[page] || PAGES.home)(m); } catch (e) { m.innerHTML = `<h2>Fehler</h2><div class="hint">${esc(e.message)}</div>`; }
@@ -408,6 +419,7 @@ const S_ = () => ({ ...cfg.settings });
 const setS = async (p) => { cfg.settings = { ...S_(), ...p }; await api.patch('settings', cfg.settings); };
 
 PAGES.home = (m) => {
+  if (isLocked()) return guestHome(m);
   const S = cfg.settings, hr = new Date().getHours(), greet = hr < 11 ? 'Guten Morgen' : hr < 18 ? 'Guten Tag' : 'Guten Abend';
   const vis = cfg.widgets.filter((w) => w.visible !== false), open = (cfg.tasks || []).filter((x) => !x.done).length, gs = cfg.gcal || {}, ic = (cfg.cache || {}).connected;
   const date = new Date().toLocaleDateString(getLang() === 'de' ? 'de-CH' : getLang(), { weekday: 'long', day: 'numeric', month: 'long' });
@@ -429,7 +441,7 @@ PAGES.home = (m) => {
 };
 
 PAGES.settings = (m) => {
-  const TABS = [['general', 'Allgemein', '⚙️'], ['update', 'Software-Update', '⬆️'], ['topbar', 'Shortcut-Leiste', '⌨️'], ['look', 'Darstellung', '🎨'], ['desktop', 'Widgets & Desktop', '🖥️'], ['units', 'Wetter & Einheiten', '🌤️'], ['accounts', 'Kalender & Konten', '📅'], ['data', 'Daten & Sicherung', '💾'], ['about', 'Über', 'ℹ️']];
+  const TABS = [['general', 'Allgemein', '⚙️'], ['update', 'Software-Update', '⬆️'], ['topbar', 'Shortcut-Leiste', '⌨️'], ['look', 'Darstellung', '🎨'], ['desktop', 'Widgets & Desktop', '🖥️'], ['units', 'Wetter & Einheiten', '🌤️'], ['accounts', 'Kalender & Konten', '📅'], ['guest', 'Gäste-Modus', '👥'], ['data', 'Daten & Sicherung', '💾'], ['about', 'Über', 'ℹ️']];
   const tab = pkState.setTab || 'general';
   m.innerHTML = `<h2>${t('st.title')}</h2><p class="sub">Alles an einem Ort. Änderungen werden sofort gespeichert.</p><div class="set"><div class="set-n" id="sn"></div><div class="set-b" id="sb"></div></div>`;
   TABS.forEach(([k, l, i]) => { const e = h(`<div class="set-i ${k === tab ? 'on' : ''}"><span>${i}</span>${l}${k === 'update' && cfg.update && cfg.update.available ? '<em class="bdg">1</em>' : ''}</div>`); e.onclick = () => { pkState.setTab = k; go('settings'); }; $('#sn').append(e); });
@@ -562,6 +574,7 @@ PAGES.settings = (m) => {
     g = group(B, 'Zurücksetzen', 'Setzt alle Widgets, Designs und Einstellungen auf den Anfang zurück. Das kann nicht rückgängig gemacht werden.');
     srow(g, 'Alles zurücksetzen', '', btn('Zurücksetzen …', async () => { if (await api.resetAll()) go('home'); }, 'dg'));
   }
+  if (tab === 'guest') guestSettings(B);
   if (tab === 'about') {
     B.append(h(`<div class="ab"><img src="../../assets/icon.png" alt=""><h3>Jafy Widgets</h3><div class="dim">Version <span id="abv"></span> · ${storeList().length} Widgets im Store</div><div class="dim" style="margin-top:10px">made by Arsenii and Fynn</div></div>`));
     api.updInfo().then((x) => { const e = $('#abv'); if (e) e.textContent = x.version; });
@@ -701,13 +714,14 @@ PAGES.sw = (m) => {
 
 api.getCfg().then((c) => { cfg = c; selId = cfg.ui?.selId || null; applyAppTheme(); applyLang(); go(location.hash.slice(1) || (cfg.settings && cfg.settings.startPage) || 'home'); });
 api.onCfg((c) => {
-  const langChanged = cfg && cfg.settings.lang !== c.settings.lang; cfg = c; if (langChanged) { applyLang(); return go(page); }
+  const langChanged = cfg && cfg.settings.lang !== c.settings.lang, lockChanged = cfg && !!(cfg.runtime || {}).locked !== !!(c.runtime || {}).locked; cfg = c; if (langChanged) { applyLang(); return go(page); }
+  if (lockChanged) return go(isLocked() ? 'home' : (page === 'unlock' ? 'home' : page));
   if (page === 'tasks') { renderTaskLists(); return; }
   const a = document.activeElement, typing = a && /INPUT|TEXTAREA|SELECT/.test(a.tagName);
   if (page === 'iphone' && !typing) return go('iphone');
   if (!typing && ['home', 'widgets', 'layouts', 'settings'].includes(page)) { const sc = $('#main').scrollTop; go(page); $('#main').scrollTop = sc; $('#main').classList.remove('fade'); }
 });
-api.onNavigate((p) => { if (p === 'tbsettings') { pkState.setTab = 'topbar'; return go('settings'); } go(p); });
+api.onNavigate((p) => { if (p === 'tbsettings') { pkState.setTab = 'topbar'; return go(isLocked() ? 'unlock' : 'settings'); } go(p); });
 // Fensterknöpfe (rot/gelb/grün) – steuern nur dieses Fenster
 ['r:close', 'y:min', 'g:max'].forEach((x) => { const [k, a] = x.split(':'); const b = document.getElementById('tl-' + k); if (b) b.onclick = (e) => api.winCtl(a === 'max' && e.altKey ? 'full' : a); });
 api.onWinState((st) => document.body.classList.toggle('maxed', st.max || st.full));

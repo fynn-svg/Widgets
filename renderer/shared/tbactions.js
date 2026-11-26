@@ -6,7 +6,10 @@ const TB_ACTIONS = {
   explorer: ['📁', 'Explorer', 'Ordner'], downloads: ['⬇️', 'Downloads', 'Ordner'], documents: ['📄', 'Dokumente', 'Ordner'], pictures: ['🖼️', 'Bilder', 'Ordner'], trash: ['🗑️', 'Papierkorb', 'Ordner'],
   play: ['⏯️', 'Play / Pause', 'Medien'], prev: ['⏮️', 'Zurück', 'Medien'], next: ['⏭️', 'Weiter', 'Medien'], mute: ['🔇', 'Ton aus', 'Medien'], voldown: ['🔉', 'Leiser', 'Medien'], volup: ['🔊', 'Lauter', 'Medien'],
   settings: ['⚙️', 'Einstellungen', 'System'], wifi: ['📶', 'WLAN', 'System'], bluetooth: ['🔷', 'Bluetooth', 'System'], sound: ['🎚️', 'Sound', 'System'], display: ['🔆', 'Bildschirm', 'System'], power: ['🔋', 'Energie', 'System'],
-  gcal: ['📅', 'Google Kalender', 'Web'], mail: ['✉️', 'Neue E-Mail', 'Web']
+  gcal: ['📅', 'Google Kalender', 'Web'], mail: ['✉️', 'Neue E-Mail', 'Web'],
+  tool_picker: ['🎨', 'Farbpipette', 'Jafy Werkzeuge'], tool_qr: ['🔳', 'QR-Code', 'Jafy Werkzeuge'], tool_convert: ['📐', 'Umrechner', 'Jafy Werkzeuge'], tool_timer: ['⏱️', 'Timer', 'Jafy Werkzeuge'],
+  tool_password: ['🔑', 'Passwort', 'Jafy Werkzeuge'], tool_text: ['🔤', 'Text-Werkzeuge', 'Jafy Werkzeuge'], tool_clip: ['📋', 'Kopier-Verlauf', 'Jafy Werkzeuge'], tool_date: ['📅', 'Datumsrechner', 'Jafy Werkzeuge'],
+  tool_percent: ['💯', 'Prozent', 'Jafy Werkzeuge'], tool_random: ['🎲', 'Zufall', 'Jafy Werkzeuge'], tool_sys: ['🖥️', 'Systeminfo', 'Jafy Werkzeuge'], tool_note: ['📝', 'Notizblock', 'Jafy Werkzeuge']
 };
 const tbItemInfo = (it) => it.kind === 'action' ? { icon: (TB_ACTIONS[it.action] || ['❔'])[0], name: it.name || (TB_ACTIONS[it.action] || ['', it.action])[1] }
   : { icon: it.icon || (it.kind === 'url' ? '🌐' : it.kind === 'folder' ? '📂' : '🚀'), name: it.name || it.path || it.url };

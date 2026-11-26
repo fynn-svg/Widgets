@@ -61,6 +61,8 @@
   "nav.designs": "Оформление и цвета",
   "nav.layouts": "Раскладки рабочего стола",
   "nav.iphone": "Календарь и iCloud",
+  "nav.tools": "Инструменты",
+  "nav.unlock": "Разблокировать",
   "nav.settings": "Настройки",
   "nav.add": "＋ Добавить виджеты",
   "tray.settings": "Настройки",

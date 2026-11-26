@@ -61,6 +61,8 @@
   "nav.designs": "Designs",
   "nav.layouts": "Desktop & Dock",
   "nav.iphone": "Kalender & Konten",
+  "nav.tools": "Werkzeuge",
+  "nav.unlock": "Entsperren",
   "nav.settings": "Einstellungen",
   "nav.add": "＋ Widgets hinzufügen",
   "tray.settings": "Einstellungen",
