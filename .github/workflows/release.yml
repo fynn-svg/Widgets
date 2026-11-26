@@ -39,6 +39,10 @@ jobs:
         if: steps.v.outputs.exists == '0'
         run: npx electron-builder --win --x64 --publish never
 
+      - name: App prüfen
+        if: steps.v.outputs.exists == '0'
+        run: node build/check.js
+
       - name: Installer bauen
         if: steps.v.outputs.exists == '0'
         shell: pwsh
