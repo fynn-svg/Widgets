@@ -12,7 +12,16 @@ const crypto = require('crypto');
 const { pathToFileURL } = require('url');
 
 const startHidden = process.argv.includes('--hidden');
-if (process.platform === 'win32') app.setAppUserModelId('ch.arsenii-fynn.applewidgets');
+if (process.platform === 'win32') app.setAppUserModelId('ch.jafy.widgets');
+// Umbenennung «Apple Widgets» → «Jafy Widgets»: Widgets und Einstellungen aus dem alten Ordner übernehmen
+try {
+  const NEWD = app.getPath('userData'), OLDD = path.join(app.getPath('appData'), 'Apple Widgets');
+  if (!fs.existsSync(path.join(NEWD, 'config.json')) && fs.existsSync(path.join(OLDD, 'config.json'))) {
+    fs.mkdirSync(NEWD, { recursive: true });
+    for (const e of fs.readdirSync(OLDD, { withFileTypes: true })) { const a = path.join(OLDD, e.name), b = path.join(NEWD, e.name);
+      if (e.isFile()) fs.copyFileSync(a, b); else if (e.isDirectory() && /^(Local Storage|IndexedDB)$/.test(e.name)) fs.cpSync(a, b, { recursive: true }); }
+  }
+} catch (e) { /* nicht kritisch */ }
 if (!app.requestSingleInstanceLock()) { app.quit(); } else { boot(); }
 
 // Native Windows-Funktionen (nur unter Windows verfügbar; ohne sie laufen die Widgets trotzdem)
@@ -116,7 +125,7 @@ function reconcile() {
 function openMain(page) {
   if (mainWin && !mainWin.isDestroyed()) { if (mainWin.isMinimized()) mainWin.restore(); mainWin.show(); mainWin.focus(); if (page) mainWin.webContents.send('navigate', page); return; }
   mainWin = new BrowserWindow({
-    width: 1240, height: 800, minWidth: 980, minHeight: 640, title: 'Apple Widgets', show: false,
+    width: 1240, height: 800, minWidth: 980, minHeight: 640, title: 'Jafy Widgets', show: false,
     frame: false, skipTaskbar: false, backgroundColor: '#161618', icon: path.join(__dirname, 'assets/icon.png'),
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false }
   });
@@ -168,7 +177,7 @@ function boot() {
     applyAutostart();
     for (const w of cfg.widgets) openWidget(w);
     tray = new Tray(nativeImage.createFromPath(path.join(__dirname, 'assets/icon.png')).resize({ width: 20, height: 20 }));
-    tray.setToolTip('Apple Widgets');
+    tray.setToolTip('Jafy Widgets');
     updateTray();
     tray.on('click', () => openMain());
     const wantMain = !startHidden || cfg.widgets.length === 0;

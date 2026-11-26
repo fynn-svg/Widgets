@@ -1,15 +1,15 @@
 # Software herunterladen
 
-## [⬇️ Apple Widgets für Windows herunterladen](https://github.com/fynn-svg/Widgets/releases/latest/download/AppleWidgets-Setup.exe)
+## [⬇️ Jafy Widgets für Windows herunterladen](https://github.com/fynn-svg/Widgets/releases/latest/download/JafyWidgets-Setup.exe)
 
-Der Link lädt immer die neueste Version (`AppleWidgets-Setup.exe`, etwa 80 MB).
+Der Link lädt immer die neueste Version (`JafyWidgets-Setup.exe`, etwa 80 MB).
 
 ## So installierst du die Software
 
 1. Klicke oben auf den Link. Der Download startet.
-2. Öffne die Datei `AppleWidgets-Setup.exe`.
+2. Öffne die Datei `JafyWidgets-Setup.exe`.
 3. Falls Windows warnt («Der Computer wurde durch Windows geschützt»), klicke auf **Weitere Informationen** und dann auf **Trotzdem ausführen**.
-4. Klicke auf **Installieren**. Danach findest du Apple Widgets im Startmenü und auf dem Desktop.
+4. Klicke auf **Installieren**. Danach findest du Jafy Widgets im Startmenü und auf dem Desktop.
 
 ## Updates
 

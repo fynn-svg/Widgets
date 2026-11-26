@@ -18,8 +18,8 @@ module.exports = async (context) => {
   if (vi) {
     const l = vi.getAllLanguagesForStringValues()[0] || { lang: 1033, codepage: 1200 };
     vi.setStringValues(l, {
-      FileDescription: 'Apple Widgets', ProductName: 'Apple Widgets',
-      CompanyName: 'Arsenii & Fynn', OriginalFilename: 'Apple Widgets.exe', InternalName: 'Apple Widgets',
+      FileDescription: 'Jafy Widgets', ProductName: 'Jafy Widgets',
+      CompanyName: 'Arsenii & Fynn', OriginalFilename: 'Jafy Widgets.exe', InternalName: 'Jafy Widgets',
       LegalCopyright: '',
     });
     const [a, b, c] = String(require('../package.json').version).split('.').map((n) => parseInt(n, 10) || 0);

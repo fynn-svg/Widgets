@@ -59,6 +59,6 @@ jobs:
         shell: bash
         run: |
           NOTES=$(git log -1 --pretty=%B)
-          gh release create "v${{ steps.v.outputs.version }}" dist/AppleWidgets-Setup.exe --title "Apple Widgets ${{ steps.v.outputs.version }}" --notes "$NOTES"
+          gh release create "v${{ steps.v.outputs.version }}" dist/JafyWidgets-Setup.exe --title "Jafy Widgets ${{ steps.v.outputs.version }}" --notes "$NOTES"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
