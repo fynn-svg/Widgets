@@ -7,7 +7,7 @@ async function load() {
   st = await window.api.tbGet(); const s = { compact: 62, normal: 76, big: 92 }[st.size] || 76;
   document.documentElement.style.setProperty('--s', s + 'px'); document.body.classList.toggle('light', (st.appTheme || {}).mode === 'light');
   bar.innerHTML = (st.clock ? '<div class="clk"><b></b><small></small></div>' : '') + st.items.map((it) => { const f = tbItemInfo(it); return `<div class="it" data-id="${esc(it.id)}" title="${esc(f.name)}">${it.img ? `<img src="${it.img}" alt="">` : `<i>${esc(f.icon)}</i>`}<span>${esc(f.name)}</span></div>`; }).join('')
-    + '<div class="it gear" data-id="__set" title="Leiste anpassen"><i>⚙️</i><span>Anpassen</span></div>';
+    + (st.locked ? '' : '<div class="it gear" data-id="__set" title="Leiste anpassen"><i>⚙️</i><span>Anpassen</span></div>');
   bar.querySelectorAll('.it').forEach((e) => (e.onclick = () => (e.dataset.id === '__set' ? window.api.openApp('tbsettings') : window.api.tbRun(e.dataset.id))));
   tick(); clearInterval(clockT); clockT = setInterval(tick, 5000);
 }

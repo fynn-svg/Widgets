@@ -61,6 +61,8 @@
   "nav.designs": "Designs & colors",
   "nav.layouts": "Desktop layouts",
   "nav.iphone": "Calendar and iCloud",
+  "nav.tools": "Tools",
+  "nav.unlock": "Unlock",
   "nav.settings": "Settings",
   "nav.add": "＋ Add widgets",
   "tray.settings": "Settings",
