@@ -1,8 +1,8 @@
 {
-  "name": "apple-widgets",
-  "productName": "Apple Widgets",
-  "version": "1.4.0",
-  "description": "Widgets im Apple-Stil für Windows, made by Arsenii and Fynn",
+  "name": "jafy-widgets",
+  "productName": "Jafy Widgets",
+  "version": "2.0.0",
+  "description": "Jafy Widgets: Widgets im Apple-Stil für den Windows-Desktop",
   "main": "main.js",
   "author": "Arsenii & Fynn",
   "license": "MIT",
@@ -19,8 +19,8 @@
     "resedit": "^2.0.3"
   },
   "build": {
-    "appId": "ch.arsenii-fynn.applewidgets",
-    "productName": "Apple Widgets",
+    "appId": "ch.jafy.widgets",
+    "productName": "Jafy Widgets",
     "files": [
       "main.js",
       "preload.js",
@@ -54,9 +54,7 @@
       "icon": "build/icon.ico",
       "signAndEditExecutable": false
     },
-    "portable": {
-      "artifactName": "AppleWidgets.exe"
-    }
+    "portable": {}
   },
   "updateRepo": "fynn-svg/Widgets",
   "repository": {

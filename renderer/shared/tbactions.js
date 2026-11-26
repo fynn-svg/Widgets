@@ -1,6 +1,6 @@
 // Alle eingebauten Funktionen der Shortcut-Leiste: [Symbol, Name, Gruppe]
 const TB_ACTIONS = {
-  store: ['🛍️', 'Widget Store', 'Apple Widgets'], widgets: ['🧩', 'Meine Widgets', 'Apple Widgets'], toggleWidgets: ['👁️', 'Widgets ein/aus', 'Apple Widgets'], appSettings: ['⚙️', 'App-Einstellungen', 'Apple Widgets'], focusOn: ['🎯', 'Widgets ausblenden', 'Apple Widgets'],
+  store: ['🛍️', 'Widget Store', 'Jafy Widgets'], widgets: ['🧩', 'Meine Widgets', 'Jafy Widgets'], toggleWidgets: ['👁️', 'Widgets ein/aus', 'Jafy Widgets'], appSettings: ['⚙️', 'App-Einstellungen', 'Jafy Widgets'], focusOn: ['🎯', 'Widgets ausblenden', 'Jafy Widgets'],
   showDesktop: ['🖥️', 'Desktop zeigen', 'Windows'], search: ['🔍', 'Suchen', 'Windows'], taskview: ['🪟', 'Alle Fenster', 'Windows'], quick: ['🎛️', 'Schnelleinstellungen', 'Windows'], notifications: ['🔔', 'Mitteilungen', 'Windows'], lock: ['🔒', 'Sperren', 'Windows'], darkmode: ['🌓', 'Hell / Dunkel', 'Windows'],
   snip: ['✂️', 'Screenshot', 'Werkzeuge'], clipboard: ['📋', 'Zwischenablage', 'Werkzeuge'], emoji: ['😀', 'Emojis', 'Werkzeuge'], calc: ['🧮', 'Rechner', 'Werkzeuge'], notepad: ['📝', 'Editor', 'Werkzeuge'], taskmgr: ['📊', 'Task-Manager', 'Werkzeuge'], terminal: ['⌨️', 'Terminal', 'Werkzeuge'],
   explorer: ['📁', 'Explorer', 'Ordner'], downloads: ['⬇️', 'Downloads', 'Ordner'], documents: ['📄', 'Dokumente', 'Ordner'], pictures: ['🖼️', 'Bilder', 'Ordner'], trash: ['🗑️', 'Papierkorb', 'Ordner'],

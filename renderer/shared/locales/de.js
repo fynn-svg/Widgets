@@ -52,7 +52,7 @@
   "nav.store": "Widget Store",
   "nav.fynn": "Widgets von Fynn",
   "nav.home": "Übersicht",
-  "nav.apple": "Apple Widgets",
+  "nav.apple": "Klassische Widgets",
   "nav.extra": "Vorschlags-Widgets",
   "nav.custom": "Eigene Widgets",
   "nav.widgets": "Meine Widgets",

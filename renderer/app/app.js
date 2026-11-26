@@ -350,7 +350,7 @@ function dockPage(m) {
 const pkState = { catId: {}, type: {}, vi: {}, size: {} };
 function picker(m, group) {
   const cats = CATS.filter((c) => c.group === group);
-  m.innerHTML = `<button class="st-back" id="stb">‹ Widget Store</button><h2>${group === 'apple' ? 'Apple Widgets' : group === 'fynn' ? 'Weitere Widgets' : 'Vorschlags-Widgets'}</h2><p class="sub">Kategorie links wählen, durch die Designs blättern und «Hinzufügen» drücken. Danach lässt sich das Widget auf dem Desktop verschieben.</p>
+  m.innerHTML = `<button class="st-back" id="stb">‹ Widget Store</button><h2>${group === 'apple' ? 'Klassische Widgets' : group === 'fynn' ? 'Weitere Widgets' : 'Vorschlags-Widgets'}</h2><p class="sub">Kategorie links wählen, durch die Designs blättern und «Hinzufügen» drücken. Danach lässt sich das Widget auf dem Desktop verschieben.</p>
     <div class="pk"><div class="pk-l"><input type="text" id="q" placeholder="Widgets suchen …"><div id="cl"></div></div><div class="pk-r" id="pr"></div></div>`;
   $('#stb').onclick = () => go('store');
   if (!pkState.catId[group] || !cats.find((c) => c.id === pkState.catId[group])) { pkState.catId[group] = cats[0].id; pkState.type[group] = cats[0].types[0]; pkState.vi[group] = 0; pkState.size[group] = null; }
@@ -446,7 +446,7 @@ PAGES.settings = (m) => {
   }
   if (tab === 'update') {
     const u = cfg.update || {};
-    const box = h(`<div class="upd"><img src="../../assets/icon.png" alt=""><div style="flex:1;min-width:0"><b>Apple Widgets</b><div class="dim" id="uv">Version …</div><div id="us" style="margin-top:6px"></div><div class="upb" id="upb" hidden><i></i></div></div><div id="ub"></div></div>`); B.append(box);
+    const box = h(`<div class="upd"><img src="../../assets/icon.png" alt=""><div style="flex:1;min-width:0"><b>Jafy Widgets</b><div class="dim" id="uv">Version …</div><div id="us" style="margin-top:6px"></div><div class="upb" id="upb" hidden><i></i></div></div><div id="ub"></div></div>`); B.append(box);
     const us = $('#us', box), ub = $('#ub', box), bar = $('#upb', box);
     const show = (r) => {
       ub.innerHTML = '';
@@ -563,7 +563,7 @@ PAGES.settings = (m) => {
     srow(g, 'Alles zurücksetzen', '', btn('Zurücksetzen …', async () => { if (await api.resetAll()) go('home'); }, 'dg'));
   }
   if (tab === 'about') {
-    B.append(h(`<div class="ab"><img src="../../assets/icon.png" alt=""><h3>Apple Widgets</h3><div class="dim">Version <span id="abv"></span> · ${storeList().length} Widgets im Store</div><div class="dim" style="margin-top:10px">made by Arsenii and Fynn</div></div>`));
+    B.append(h(`<div class="ab"><img src="../../assets/icon.png" alt=""><h3>Jafy Widgets</h3><div class="dim">Version <span id="abv"></span> · ${storeList().length} Widgets im Store</div><div class="dim" style="margin-top:10px">made by Arsenii and Fynn</div></div>`));
     api.updInfo().then((x) => { const e = $('#abv'); if (e) e.textContent = x.version; });
     const g = group(B, 'Quellen'); srow(g, 'Wetterdaten', esc(t('st.attribution')), btn('open-meteo.com', () => api.openUrl('https://open-meteo.com/')));
   }

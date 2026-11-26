@@ -158,7 +158,7 @@ async function fetchAll(urls) {
   return build(all);
 }
 
-// Liste im Format der Apple Widgets: { id, title, start, end, allDay, color, cal }
+// Liste im Format der Jafy Widgets: { id, title, start, end, allDay, color, cal }
 function buildList(events) {
   const now = new Date();
   const from = new Date(now.getFullYear(), now.getMonth() - 3, 1);
