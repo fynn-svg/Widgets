@@ -29,8 +29,13 @@ async function install(info, onProgress) {
   await new Promise((res, rej) => out.end((e) => (e ? rej(e) : res())));
   if (info.size && fs.statSync(file).size !== info.size) throw new Error('Download unvollständig.');
   // Installer still ausführen; er beendet die App und startet danach die neue Version selbst
-  spawn('cmd.exe', ['/c', `timeout /t 2 /nobreak >nul & "${file}" /S`], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
-  setTimeout(() => app.exit(0), 600);
+  // Installer direkt starten (ohne cmd: Pfade mit Leerzeichen/Umlauten gingen dort kaputt)
+  await new Promise((res, rej) => {
+    let ch; try { ch = spawn(file, ['/S'], { detached: true, stdio: 'ignore', windowsHide: false }); } catch (e) { return rej(new Error('Installer konnte nicht gestartet werden: ' + e.message)); }
+    ch.once('error', (e) => rej(new Error(e.code === 'EACCES' || e.code === 'EPERM' ? 'Windows oder ein Virenschutz hat den Installer blockiert.' : 'Installer konnte nicht gestartet werden (' + (e.code || e.message) + ').')));
+    ch.once('spawn', () => { ch.unref(); res(); });
+  });
+  setTimeout(() => app.exit(0), 800);
   return true;
 }
 module.exports = { check, install, cmp };

@@ -35,12 +35,15 @@ function pushBottom(win) { // Widget unter alle anderen Fenster legen (Desktop-M
 }
 // ---------- Gäste-Modus: gesperrte Funktionen ----------
 let lockUnlocked = false;
-const isLocked = () => !!(cfg && cfg.lock && cfg.lock.enabled && cfg.lock.hash && !lockUnlocked);
+const isLocked = () => !!(cfg && cfg.lock && cfg.lock.enabled && !lockUnlocked);
+const isAdmin = () => lockUnlocked; // Admin-PIN in dieser Sitzung eingegeben
+// Nur mit Admin-PIN (Standard-PIN): Daten, Sicherung, Konten, Update-Quelle, Gäste-Modus
+const ADMIN_BLOCK = new Set(['app:reset', 'app:openData', 'cfg:import', 'cfg:export', 'icloud:connect', 'icloud:disconnect', 'gcal:set', 'lock:setup', 'lock:allow', 'lock:changePin', 'lock:disable']);
 const LOCK_BLOCK = new Set(['widget:add', 'widget:update', 'widget:remove', 'widget:duplicate', 'widget:toDisplay', 'widgets:allOnTop', 'widgets:allVisible', 'layout:save', 'layout:apply',
   'drag:begin', 'widget:menu', 'autostart:set', 'app:reset', 'app:openData', 'cfg:import', 'cfg:export', 'icloud:connect', 'icloud:disconnect', 'gcal:set', 'gcal:sync',
   'dock:reorder', 'dock:remove', 'dock:addPath', 'dock:pickApp', 'dock:itemMenu', 'tb:pickApp', 'upd:install', 'focus:set', 'pick:folder', 'pick:image']);
 { const _h = ipcMain.handle.bind(ipcMain), _o = ipcMain.on.bind(ipcMain);
-  ipcMain.handle = (ch, fn) => _h(ch, (e, ...a) => (LOCK_BLOCK.has(ch) && isLocked() ? null : fn(e, ...a)));
+  ipcMain.handle = (ch, fn) => _h(ch, (e, ...a) => ((LOCK_BLOCK.has(ch) && isLocked()) || (ADMIN_BLOCK.has(ch) && !isAdmin()) ? null : fn(e, ...a)));
   ipcMain.on = (ch, fn) => _o(ch, (e, ...a) => { if (LOCK_BLOCK.has(ch) && isLocked()) return; return fn(e, ...a); }); }
 const WPS = require('./renderer/shared/sizes.js'); const SIZES = WPS.dims;
 
@@ -213,6 +216,7 @@ ipcMain.handle('cfg:get', () => pubCfg());
 ipcMain.handle('cfg:patch', (_e, key, value) => {
   if (!['settings', 'theme', 'layouts', 'templates', 'appTheme', 'ui', 'dock', 'appearance', 'topbar'].includes(key)) return;
   if (isLocked() && key !== 'ui') return pubCfg();
+  if (key === 'settings' && !isAdmin()) { const o = cfg.settings || {}; value = { ...value, updateRepo: o.updateRepo, autoUpdateCheck: o.autoUpdateCheck, icalUrls: o.icalUrls }; }
   if (key === 'settings') clipEnsure(value);
   cfg[key] = value; if (key === 'settings') { applyAutostart(); updateTray(); } if (key === 'dock') applyDock(); if (key === 'topbar' || key === 'theme' || key === 'appTheme') applyTopbar(); if (key === 'appearance') { lastNight = null; scheduleTick(); followWallpaper(); } reconcile(); return pubCfg();
 });
@@ -949,14 +953,13 @@ ipcMain.handle('tool:sys', () => {
 
 // ---------- Gäste-Modus (PIN) ----------
 const pinHash = (pin, salt) => crypto.scryptSync(String(pin), salt, 32).toString('hex');
-const pinOk = (pin) => { const l = cfg.lock || {}; if (!l.hash || !l.salt) return false; try { return crypto.timingSafeEqual(Buffer.from(pinHash(pin, l.salt), 'hex'), Buffer.from(l.hash, 'hex')); } catch { return false; } };
+const ADMIN_PIN_DEFAULT = '----';
+const pinOk = (pin) => { const l = cfg.lock || {}; if (!l.hash || !l.salt) return String(pin) === ADMIN_PIN_DEFAULT; try { return crypto.timingSafeEqual(Buffer.from(pinHash(pin, l.salt), 'hex'), Buffer.from(l.hash, 'hex')); } catch { return false; } };
 let pinFails = 0, pinWaitUntil = 0;
-function lockApply() { cfg.runtime = { ...(cfg.runtime || {}), locked: isLocked(), lockOn: !!(cfg.lock && cfg.lock.enabled) }; updateTray(); if (tbWin && !tbWin.isDestroyed()) tbWin.webContents.send('tb:update'); broadcast(); }
+function lockApply() { cfg.runtime = { ...(cfg.runtime || {}), locked: isLocked(), admin: isAdmin(), lockOn: !!(cfg.lock && cfg.lock.enabled), pinDefault: !(cfg.lock && cfg.lock.hash) }; updateTray(); if (tbWin && !tbWin.isDestroyed()) tbWin.webContents.send('tb:update'); broadcast(); }
 const LOCK_ALLOW_DEFAULT = { tools: true, tasks: true, widgetsToggle: true };
-ipcMain.handle('lock:setup', (_e, pin, allow) => {
-  if (isLocked() || !/^\d{4,8}$/.test(String(pin))) return false;
-  const salt = crypto.randomBytes(16).toString('hex');
-  cfg.lock = { enabled: true, salt, hash: pinHash(pin, salt), allow: { ...LOCK_ALLOW_DEFAULT, ...(allow || {}) } };
+ipcMain.handle('lock:setup', (_e, allow) => {
+  cfg.lock = { ...(cfg.lock || {}), enabled: true, allow: { ...LOCK_ALLOW_DEFAULT, ...(allow || {}) } };
   lockUnlocked = false; saveCfg(); lockApply(); return true;
 });
 ipcMain.handle('lock:unlock', (_e, pin) => {
@@ -965,7 +968,7 @@ ipcMain.handle('lock:unlock', (_e, pin) => {
   pinFails++; if (pinFails >= 5) { pinWaitUntil = Date.now() + 30000 * Math.min(pinFails - 4, 10); }
   return { ok: false, wait: Date.now() < pinWaitUntil ? Math.ceil((pinWaitUntil - Date.now()) / 1000) : 0 };
 });
-ipcMain.handle('lock:relock', () => { if (!(cfg.lock && cfg.lock.enabled)) return false; lockUnlocked = false; lockApply(); if (mainWin && !mainWin.isDestroyed()) mainWin.webContents.send('navigate', 'home'); return true; });
-ipcMain.handle('lock:allow', (_e, allow) => { if (isLocked() || !cfg.lock) return false; cfg.lock.allow = { ...LOCK_ALLOW_DEFAULT, ...(allow || {}) }; saveCfg(); lockApply(); return true; });
-ipcMain.handle('lock:changePin', (_e, pin) => { if (isLocked() || !cfg.lock || !/^\d{4,8}$/.test(String(pin))) return false; cfg.lock.salt = crypto.randomBytes(16).toString('hex'); cfg.lock.hash = pinHash(pin, cfg.lock.salt); saveCfg(); return true; });
-ipcMain.handle('lock:disable', () => { if (isLocked()) return false; cfg.lock = { enabled: false }; lockUnlocked = false; saveCfg(); lockApply(); return true; });
+ipcMain.handle('lock:relock', () => { lockUnlocked = false; lockApply(); if (mainWin && !mainWin.isDestroyed() && cfg.lock && cfg.lock.enabled) mainWin.webContents.send('navigate', 'home'); return true; });
+ipcMain.handle('lock:allow', (_e, allow) => { cfg.lock = cfg.lock || {}; cfg.lock.allow = { ...LOCK_ALLOW_DEFAULT, ...(allow || {}) }; saveCfg(); lockApply(); return true; });
+ipcMain.handle('lock:changePin', (_e, pin) => { if (!/^\d{4,8}$/.test(String(pin))) return false; cfg.lock = cfg.lock || {}; cfg.lock.salt = crypto.randomBytes(16).toString('hex'); cfg.lock.hash = pinHash(pin, cfg.lock.salt); saveCfg(); lockApply(); return true; });
+ipcMain.handle('lock:disable', () => { cfg.lock = { ...(cfg.lock || {}), enabled: false }; lockUnlocked = false; saveCfg(); lockApply(); return true; });

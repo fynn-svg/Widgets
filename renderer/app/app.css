@@ -219,3 +219,7 @@ body:not(.wb-win) #tb-up{margin-left:auto}
 .set-i.on{background:var(--bg2);box-shadow:inset 3px 0 0 var(--a)}
 .set-i .bdg{flex:none}
 .set-h{display:flex;align-items:center;gap:14px;margin:2px 0 18px}.set-h span{font-size:30px;width:52px;height:52px;border-radius:14px;background:var(--bg1);border:1px solid var(--ln);display:grid;place-items:center}.set-h h3{margin:0;font-size:20px}.set-h small{color:var(--t2)}
+
+.set-lk{margin-left:auto;font-style:normal;font-size:12px;opacity:.7}
+#alk{border-radius:99px;font-size:12px;padding:6px 12px;margin-left:auto}
+.adm{text-align:center;padding:28px 18px}.adm h3{margin:6px 0}.adm p{max-width:420px;margin:0 auto 18px;line-height:1.45}

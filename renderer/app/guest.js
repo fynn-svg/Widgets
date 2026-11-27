@@ -12,7 +12,7 @@ function pinPad(onDone, opts = {}) {
 }
 
 PAGES.unlock = (m) => {
-  m.innerHTML = '<div class="lock-pg"><div class="lock-ic">🔒</div><h2>Entsperren</h2><p class="sub">Diese App ist im Gäste-Modus. Gib die PIN ein, um Einstellungen, Widget Store und Widgets zu bearbeiten.</p><div id="pp"></div></div>';
+  m.innerHTML = '<div class="lock-pg"><div class="lock-ic">🔒</div><h2>Entsperren</h2><p class="sub">Diese App ist im Gäste-Modus. Gib die Admin-PIN ein, um Einstellungen, Widget Store und Widgets zu bearbeiten.</p><div id="pp"></div></div>';
   const pad = pinPad(async (pin, ui) => {
     const r = await api.lockUnlock(pin);
     if (r && r.ok) { const nx = pkState.afterUnlock || 'home'; pkState.afterUnlock = null; cfg.runtime = { ...cfg.runtime, locked: false }; go(nx); return; }
@@ -34,31 +34,27 @@ function guestHome(m) {
   if (a.tools === false && a.tasks === false) q.append(h('<div class="hint">Die Widgets auf dem Desktop kannst du ganz normal benutzen.</div>'));
 }
 
+// Admin-PIN-Abfrage direkt im Einstellungsbereich
+function adminGate(B) {
+  const box = h(`<div class="card adm"><div class="lock-ic">🔒</div><h3>Admin-PIN nötig</h3><p class="dim">Dieser Bereich ist geschützt, damit niemand Daten, Konten oder Sicherheit verstellt. Nach der Eingabe bleibt er offen, bis du das Fenster schliesst.</p><div class="adm-p"></div></div>`);
+  B.append(box);
+  const pad = pinPad(async (pin, ui) => {
+    const r = await api.lockUnlock(pin);
+    if (r && r.ok) { cfg.runtime = { ...cfg.runtime, admin: true, locked: false }; go('settings'); return; }
+    pad.shake(); ui.msg.innerHTML = r && r.wait ? `<span class="no">Zu viele Versuche. Warte ${r.wait} Sekunden.</span>` : '<span class="no">Falsche PIN.</span>';
+  }, { msg: 'Admin-PIN eingeben' });
+  $('.adm-p', box).append(pad);
+}
+
 function guestSettings(B) {
-  const on = !!(cfg.lock && cfg.lock.enabled), allow = { tools: true, tasks: true, widgetsToggle: true, ...((cfg.lock && cfg.lock.allow) || {}) };
-  B.append(h(`<div class="tb-hero"><div class="lock-ic" style="font-size:44px">${on ? '🔐' : '👥'}</div><div><b>Gäste-Modus ${on ? 'ist eingeschaltet' : ''}</b><div class="dim" style="font-size:13px;margin-top:4px;line-height:1.45">Gib die App an andere Leute weiter, ohne dass sie etwas verstellen. Im Gäste-Modus sind Einstellungen, Widget Store, Widgets bearbeiten, verschieben und löschen, Designs, Layouts, Dock und Konten mit einer PIN gesperrt. Die Widgets auf dem Desktop funktionieren normal weiter.</div></div></div>`));
-  const allowGroup = (save) => {
-    const g = group(B, 'Das dürfen Gäste', 'Alles andere bleibt gesperrt, bis jemand die PIN eingibt.');
-    [['tools', 'Werkzeuge benutzen', 'QR-Code, Umrechner, Timer und mehr'], ['tasks', 'Aufgaben ansehen und abhaken', '']].forEach(([k, l, d]) => srow(g, l, d, tg(allow[k] !== false, (v) => { allow[k] = v; save && save(); })));
-  };
-  if (!on) {
-    allowGroup(null);
-    const g = group(B, 'PIN festlegen', 'Merke dir die PIN gut. Ohne PIN kommst du nur über eine Neuinstallation wieder in die Einstellungen.');
-    const p1 = h('<input type="password" inputmode="numeric" maxlength="8" placeholder="4 bis 8 Ziffern" style="width:160px">'), p2 = h('<input type="password" inputmode="numeric" maxlength="8" placeholder="Nochmal" style="width:160px">');
-    srow(g, 'Neue PIN', '', p1); srow(g, 'PIN wiederholen', '', p2);
-    const msg = h('<span class="no"></span>');
-    srow(g, 'Gäste-Modus einschalten', 'Die App ist danach sofort gesperrt', [msg, btn('Einschalten und sperren', async () => {
-      if (!/^\d{4,8}$/.test(p1.value)) return (msg.textContent = 'Die PIN muss aus 4 bis 8 Ziffern bestehen. ');
-      if (p1.value !== p2.value) return (msg.textContent = 'Die beiden PINs sind nicht gleich. ');
-      if (await api.lockSetup(p1.value, allow)) { pkState.setTab = 'general'; cfg.runtime = { ...cfg.runtime, locked: true }; go('home'); }
-    }, 'p')]);
-    return;
-  }
-  const g0 = group(B, 'Status');
-  srow(g0, 'Entsperrt', 'Die App sperrt sich wieder, sobald du das Fenster schliesst', btn('🔒 Jetzt sperren', () => api.lockRelock(), 'p'));
-  allowGroup(() => api.lockAllow(allow));
-  const g = group(B, 'PIN und Ausschalten');
-  const np = h('<input type="password" inputmode="numeric" maxlength="8" placeholder="Neue PIN" style="width:140px">'), msg = h('<span class="dim"></span>');
-  srow(g, 'PIN ändern', '4 bis 8 Ziffern', [msg, np, btn('Ändern', async () => { if (!/^\d{4,8}$/.test(np.value)) { msg.textContent = 'Nur 4 bis 8 Ziffern. '; return; } if (await api.lockChangePin(np.value)) { np.value = ''; msg.textContent = '✓ Geändert '; } })]);
-  srow(g, 'Gäste-Modus ausschalten', 'Alles ist wieder frei zugänglich', btn('Ausschalten', async () => { if (confirm('Gäste-Modus wirklich ausschalten?')) { await api.lockDisable(); } }, 'dg'));
+  const on = !!(cfg.lock && cfg.lock.enabled), allow = { tools: true, tasks: true, ...((cfg.lock && cfg.lock.allow) || {}) }, def = cfg.runtime && cfg.runtime.pinDefault;
+  const g1 = group(B, 'Admin-PIN', 'Die Admin-PIN schützt Daten & Sicherung, Kalender & Konten, Update-Einstellungen und den Gäste-Modus.');
+  if (def) srow(g1, '⚠️ Standard-PIN aktiv', 'Ändere sie, damit nur du sie kennst', null);
+  const np = h('<input type="password" inputmode="numeric" maxlength="8" placeholder="Neue PIN" style="width:130px">'), np2 = h('<input type="password" inputmode="numeric" maxlength="8" placeholder="Wiederholen" style="width:130px">'), msg = h('<span class="dim"></span>');
+  srow(g1, 'Admin-PIN ändern', '4 bis 8 Ziffern', [msg, np, np2, btn('Ändern', async () => { if (!/^\d{4,8}$/.test(np.value)) { msg.textContent = 'Nur 4 bis 8 Ziffern. '; return; } if (np.value !== np2.value) { msg.textContent = 'Nicht gleich. '; return; } if (await api.lockChangePin(np.value)) { np.value = np2.value = ''; msg.textContent = '✓ Geändert '; } })]);
+  srow(g1, 'Admin-Bereiche sperren', 'Sperrt sofort wieder, sonst beim Schliessen des Fensters', btn('🔒 Jetzt sperren', () => api.lockRelock()));
+  const g2 = group(B, 'Gäste-Modus', 'Im Gäste-Modus sind auch Widget Store, Widgets bearbeiten, verschieben und löschen, Designs, Layouts und Dock gesperrt. Die Widgets auf dem Desktop funktionieren normal weiter.');
+  srow(g2, 'Gäste-Modus', on ? 'Eingeschaltet: ohne Admin-PIN ist fast alles gesperrt' : 'Für fremde Leute: sperrt die ganze App mit der Admin-PIN', on ? btn('Ausschalten', () => api.lockDisable(), 'dg') : btn('Einschalten und sperren', async () => { if (await api.lockSetup(allow)) { pkState.setTab = 'general'; cfg.runtime = { ...cfg.runtime, locked: true, admin: false }; go('home'); } }, 'p'));
+  const g3 = group(B, 'Das dürfen Gäste');
+  [['tools', 'Werkzeuge benutzen', 'QR-Code, Umrechner, Timer und mehr'], ['tasks', 'Aufgaben ansehen und abhaken', '']].forEach(([k, l, d]) => srow(g3, l, d, tg(allow[k] !== false, (v) => { allow[k] = v; if (on) api.lockAllow(allow); else cfg.lock = { ...(cfg.lock || {}), allow }; })));
 }

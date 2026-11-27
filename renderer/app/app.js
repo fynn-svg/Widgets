@@ -458,11 +458,12 @@ const SET_TABS = [['general', 'Allgemein', '⚙️', 'Sprache, Name und Start mi
   ['accounts', 'Kalender & Konten', '📅', 'Google Kalender und iCloud'], ['guest', 'Gäste-Modus', '👥', 'App mit PIN für andere sperren'], ['data', 'Daten & Sicherung', '💾', 'Sichern, wiederherstellen, zurücksetzen'], ['about', 'Über', 'ℹ️', 'Version und Hilfe']];
 PAGES.settings = (m) => {
   const tab = pkState.setTab || 'general', upd = cfg.update && cfg.update.available, q = pkState.setQ || '';
-  m.innerHTML = `<div class="set-top"><div><h2>${t('st.title')}</h2><p class="sub">Änderungen werden sofort gespeichert.</p></div><div class="set-q"><span>🔍</span><input type="search" id="sq" placeholder="Einstellung suchen …" value="${esc(q)}"></div></div>
+  m.innerHTML = `<div class="set-top"><div><h2>${t('st.title')}</h2><p class="sub">Änderungen werden sofort gespeichert.</p></div>${isAdmin() ? '<button id="alk" title="Admin-Bereiche wieder sperren">🔓 Admin aktiv · Sperren</button>' : ''}<div class="set-q"><span>🔍</span><input type="search" id="sq" placeholder="Einstellung suchen …" value="${esc(q)}"></div></div>
     ${upd && !(tab === 'update' && !q) ? `<div class="hm-up set-up" id="sup"><span>⬆️</span><div style="flex:1"><b>Update auf Version ${esc(cfg.update.latest)} verfügbar</b><small>Mit einem Klick installieren. Deine Widgets und Einstellungen bleiben erhalten.</small></div><button class="p">Jetzt aktualisieren</button></div>` : ''}
     <div class="set"><div class="set-n" id="sn"></div><div class="set-b" id="sb"></div></div>`;
+  if ($('#alk')) $('#alk').onclick = () => api.lockRelock();
   if ($('#sup')) $('#sup').onclick = () => { pkState.setTab = 'update'; pkState.setQ = ''; go('settings'); };
-  SET_TABS.forEach(([k, l, i, d]) => { const e = h(`<div class="set-i ${k === tab && !q ? 'on' : ''}"><span>${i}</span><div class="set-il"><b>${l}</b><small>${d}</small></div>${k === 'update' && upd ? '<em class="bdg">1</em>' : ''}</div>`); e.onclick = () => { pkState.setTab = k; pkState.setQ = ''; go('settings'); }; $('#sn').append(e); });
+  SET_TABS.forEach(([k, l, i, d]) => { const e = h(`<div class="set-i ${k === tab && !q ? 'on' : ''}"><span>${i}</span><div class="set-il"><b>${l}</b><small>${d}</small></div>${k === 'update' && upd ? '<em class="bdg">1</em>' : ''}${ADMIN_TABS.includes(k) && !isAdmin() ? '<em class="set-lk" title="Admin-PIN nötig">🔒</em>' : ''}</div>`); e.onclick = () => { pkState.setTab = k; pkState.setQ = ''; go('settings'); }; $('#sn').append(e); });
   const sq = $('#sq'); sq.oninput = debounce(() => { pkState.setQ = sq.value; const sc = $('#main').scrollTop; go('settings'); $('#main').scrollTop = sc; const n = $('#sq'); n.focus(); n.setSelectionRange(n.value.length, n.value.length); }, 200);
   const B = $('#sb');
   if (q.trim()) return settingsSearch(B, q.trim().toLowerCase());
@@ -481,7 +482,10 @@ function settingsSearch(B, q) {
   });
   if (!hits) B.append(h(`<div class="hint">Nichts gefunden für «${esc(q)}». Versuch ein anderes Wort, zum Beispiel <b>Update</b>, <b>Farbe</b>, <b>Start</b> oder <b>PIN</b>.</div>`));
 }
+const ADMIN_TABS = ['accounts', 'guest', 'data'];
+const isAdmin = () => !!(cfg && cfg.runtime && cfg.runtime.admin);
 function renderSetTab(tab, B) {
+  if (ADMIN_TABS.includes(tab) && !isAdmin()) return adminGate(B);
   const S = S_();
   if (tab === 'general') {
     let g = group(B, 'Allgemein');
@@ -504,6 +508,7 @@ function renderSetTab(tab, B) {
     };
     api.onUpdProgress((p) => { const i = $('#upb i'); if (i) i.style.width = Math.round(p * 100) + '%'; });
     api.updInfo().then((x) => { $('#uv', box).textContent = 'Version ' + x.version + (x.repo ? ' · github.com/' + x.repo : ''); show(x.last || (u.at ? u : null)); });
+    if (!isAdmin()) { const ga = group(B, 'Einstellungen'); srow(ga, '🔒 Update-Einstellungen', 'Nur mit Admin-PIN änderbar', btn('Entsperren', () => { pkState.setTab = 'update'; pkState.adminAsk = true; go('settings'); })); if (pkState.adminAsk) { pkState.adminAsk = false; adminGate(B); } return; }
     const g = group(B, 'Einstellungen', 'Updates kommen aus dem GitHub-Repository der App. Deine Widgets und Einstellungen bleiben beim Update erhalten.');
     srow(g, 'Automatisch nach Updates suchen', 'Beim Start und danach jede Stunde', tg(S.autoUpdateCheck !== false, (v) => setS({ autoUpdateCheck: v })));
     const rp = h(`<input type="text" placeholder="besitzer/repository" value="${esc(S.updateRepo || '')}" style="width:220px">`); rp.onchange = () => setS({ updateRepo: rp.value.trim() });
@@ -753,7 +758,8 @@ PAGES.sw = (m) => {
 api.getCfg().then((c) => { cfg = c; selId = cfg.ui?.selId || null; applyAppTheme(); applyLang(); go(location.hash.slice(1) || (cfg.settings && cfg.settings.startPage) || 'home'); });
 api.onCfg((c) => {
   setTimeout(applyWinButtons, 0);
-  const langChanged = cfg && cfg.settings.lang !== c.settings.lang, lockChanged = cfg && !!(cfg.runtime || {}).locked !== !!(c.runtime || {}).locked; cfg = c; if (langChanged) { applyLang(); return go(page); }
+  const langChanged = cfg && cfg.settings.lang !== c.settings.lang, lockChanged = cfg && !!(cfg.runtime || {}).locked !== !!(c.runtime || {}).locked, adminChanged = cfg && !!(cfg.runtime || {}).admin !== !!(c.runtime || {}).admin; cfg = c; if (langChanged) { applyLang(); return go(page); }
+  if (adminChanged && !lockChanged && page === 'settings') return go('settings');
   if (lockChanged) return go(isLocked() ? 'home' : (page === 'unlock' ? 'home' : page));
   if (page === 'tasks') { renderTaskLists(); return; }
   const a = document.activeElement, typing = a && /INPUT|TEXTAREA|SELECT/.test(a.tagName);
