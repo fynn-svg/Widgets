@@ -170,6 +170,7 @@ function updateTray() {
     { label: '🔒 Entsperren …', click: () => openMain('unlock') }
   ]));
   tray.setContextMenu(Menu.buildFromTemplate([
+    ...(cfg.update && cfg.update.available ? [{ label: '⬆️ Update auf ' + cfg.update.latest + ' installieren', click: () => openMain('updates') }, { type: 'separator' }] : []),
     { label: tt('tray.settings'), click: () => openMain('settings') },
     { label: tt('tray.add'), click: () => openMain('store') },
     { label: tt('tray.refresh'), click: () => { locCache = { t: 0, v: null }; refreshAll(); } },
@@ -200,7 +201,7 @@ function boot() {
     const wantMain = !startHidden || cfg.widgets.length === 0;
     showSplash(() => { if (wantMain) openMain(process.env.WP_PAGE); });
     startGcal();
-    if (!process.env.AW_CAPTURE && cfg.settings.autoUpdateCheck !== false) { setTimeout(updCheck, 8000); setInterval(updCheck, 6 * 3600 * 1000); }
+    if (!process.env.AW_CAPTURE && cfg.settings.autoUpdateCheck !== false) { setTimeout(updCheck, 8000); setInterval(updCheck, 3600 * 1000); }
     if (process.env.AW_CAPTURE) startCapture();
     applyDock(); startDockPolling(); applyTopbar(); startSchedule(); clipEnsure(cfg.settings); lockApply();
     startIcloud(); startScreentime();
@@ -856,7 +857,7 @@ const updRepo = () => (cfg.settings.updateRepo || UPDATE_REPO_DEFAULT || '').tri
 let updInfo = null;
 async function updCheck() {
   try { updInfo = await updater.check(updRepo()); } catch (e) { updInfo = { ok: false, error: 'Keine Verbindung zu GitHub.' }; }
-  cfg.update = { ...updInfo, at: Date.now(), repo: updRepo() }; delete cfg.update.notes; broadcast(); return { ...updInfo, repo: updRepo() };
+  cfg.update = { ...updInfo, at: Date.now(), repo: updRepo() }; delete cfg.update.notes; broadcast(); updateTray(); try { tray && tray.setToolTip(cfg.update.available ? 'Jafy Widgets – Update verfügbar' : 'Jafy Widgets'); } catch {} return { ...updInfo, repo: updRepo() };
 }
 ipcMain.handle('upd:check', () => updCheck());
 ipcMain.handle('upd:info', () => ({ version: app.getVersion(), repo: updRepo(), last: updInfo }));

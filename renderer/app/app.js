@@ -34,8 +34,21 @@ function applyAppTheme() {
 // Gäste-Modus: welche Seiten ohne PIN erlaubt sind
 const isLocked = () => !!(cfg && cfg.runtime && cfg.runtime.locked);
 const guestPages = () => { const a = (cfg.lock && cfg.lock.allow) || {}; return ['home', 'unlock', ...(a.tools !== false ? ['tools'] : []), ...(a.tasks !== false ? ['tasks'] : [])]; };
+// Fensterknöpfe: Windows-Stil (Standard) oder Mac-Stil
+const WB_ICONS = { y: '<svg viewBox="0 0 10 10"><path d="M0 5h10"/></svg>', g: '<svg viewBox="0 0 10 10"><rect x=".5" y=".5" width="9" height="9"/></svg>', gm: '<svg viewBox="0 0 10 10"><rect x=".5" y="2.5" width="7" height="7"/><path d="M2.5 2.5V.5h7v7h-2"/></svg>', r: '<svg viewBox="0 0 10 10"><path d="M0 0l10 10M10 0L0 10"/></svg>' };
+function applyWinButtons() {
+  const win = ((cfg && cfg.settings.winButtons) || 'win') === 'win', maxed = document.body.classList.contains('maxed');
+  document.body.classList.toggle('wb-win', win);
+  const set = (k, html, title) => { const b = document.getElementById('tl-' + k); if (b) { b.innerHTML = html; b.title = title; } };
+  if (win) { set('y', WB_ICONS.y, 'Minimieren'); set('g', maxed ? WB_ICONS.gm : WB_ICONS.g, maxed ? 'Verkleinern' : 'Maximieren'); set('r', WB_ICONS.r, 'Schliessen (Jafy Widgets läuft im Hintergrund weiter)'); }
+  else { set('r', '<i>×</i>', 'Schliessen'); set('y', '<i>−</i>', 'Minimieren'); set('g', '<i>+</i>', 'Vergrössern (Alt: Vollbild)'); }
+  let ub = document.getElementById('tb-up'); const up = cfg && cfg.update && cfg.update.available;
+  if (up && !ub) { ub = h('<button id="tb-up" title="Update installieren">⬆️ Update verfügbar</button>'); ub.onclick = () => { pkState.setTab = 'update'; pkState.setQ = ''; go(isLocked() ? 'unlock' : 'settings'); }; document.getElementById('tb').append(ub); }
+  if (ub) ub.hidden = !up;
+}
 function go(p) {
-  if (cfg) { applyAppTheme(); applyLang(); }
+  if (cfg) { applyAppTheme(); applyLang(); applyWinButtons(); }
+  if (p === 'updates') { pkState.setTab = 'update'; pkState.setQ = ''; p = 'settings'; }
   if (/^tool:/.test(p)) { pkState.tool = p.slice(5); p = 'tools'; }
   let [k, id] = p.split(':');
   if (isLocked() && !guestPages().includes(k)) { if (k !== 'home') pkState.afterUnlock = p; k = 'unlock'; id = null; }
@@ -440,12 +453,36 @@ PAGES.home = (m) => {
     .forEach(([i, a, b, p]) => { const e = h(`<div class="hm-qi"><span>${i}</span><div><b>${a}</b><small>${b}</small></div></div>`); e.onclick = () => { if (p === 'tbsettings') { pkState.setTab = 'topbar'; return go('settings'); } go(p); }; $('#hq').append(e); });
 };
 
+const SET_TABS = [['general', 'Allgemein', '⚙️', 'Sprache, Name und Start mit Windows'], ['update', 'Software-Update', '⬆️', 'Neue Versionen installieren'], ['look', 'Darstellung', '🎨', 'Hell oder dunkel, Farbe und Fensterknöpfe'],
+  ['desktop', 'Widgets & Desktop', '🖥️', 'Raster, Verhalten und Dock'], ['topbar', 'Shortcut-Leiste', '⌨️', 'Leiste am oberen Bildschirmrand'], ['units', 'Wetter & Einheiten', '🌤️', 'Ort, Temperatur und Uhrzeit'],
+  ['accounts', 'Kalender & Konten', '📅', 'Google Kalender und iCloud'], ['guest', 'Gäste-Modus', '👥', 'App mit PIN für andere sperren'], ['data', 'Daten & Sicherung', '💾', 'Sichern, wiederherstellen, zurücksetzen'], ['about', 'Über', 'ℹ️', 'Version und Hilfe']];
 PAGES.settings = (m) => {
-  const TABS = [['general', 'Allgemein', '⚙️'], ['update', 'Software-Update', '⬆️'], ['topbar', 'Shortcut-Leiste', '⌨️'], ['look', 'Darstellung', '🎨'], ['desktop', 'Widgets & Desktop', '🖥️'], ['units', 'Wetter & Einheiten', '🌤️'], ['accounts', 'Kalender & Konten', '📅'], ['guest', 'Gäste-Modus', '👥'], ['data', 'Daten & Sicherung', '💾'], ['about', 'Über', 'ℹ️']];
-  const tab = pkState.setTab || 'general';
-  m.innerHTML = `<h2>${t('st.title')}</h2><p class="sub">Alles an einem Ort. Änderungen werden sofort gespeichert.</p><div class="set"><div class="set-n" id="sn"></div><div class="set-b" id="sb"></div></div>`;
-  TABS.forEach(([k, l, i]) => { const e = h(`<div class="set-i ${k === tab ? 'on' : ''}"><span>${i}</span>${l}${k === 'update' && cfg.update && cfg.update.available ? '<em class="bdg">1</em>' : ''}</div>`); e.onclick = () => { pkState.setTab = k; go('settings'); }; $('#sn').append(e); });
-  const B = $('#sb'), S = S_();
+  const tab = pkState.setTab || 'general', upd = cfg.update && cfg.update.available, q = pkState.setQ || '';
+  m.innerHTML = `<div class="set-top"><div><h2>${t('st.title')}</h2><p class="sub">Änderungen werden sofort gespeichert.</p></div><div class="set-q"><span>🔍</span><input type="search" id="sq" placeholder="Einstellung suchen …" value="${esc(q)}"></div></div>
+    ${upd && !(tab === 'update' && !q) ? `<div class="hm-up set-up" id="sup"><span>⬆️</span><div style="flex:1"><b>Update auf Version ${esc(cfg.update.latest)} verfügbar</b><small>Mit einem Klick installieren. Deine Widgets und Einstellungen bleiben erhalten.</small></div><button class="p">Jetzt aktualisieren</button></div>` : ''}
+    <div class="set"><div class="set-n" id="sn"></div><div class="set-b" id="sb"></div></div>`;
+  if ($('#sup')) $('#sup').onclick = () => { pkState.setTab = 'update'; pkState.setQ = ''; go('settings'); };
+  SET_TABS.forEach(([k, l, i, d]) => { const e = h(`<div class="set-i ${k === tab && !q ? 'on' : ''}"><span>${i}</span><div class="set-il"><b>${l}</b><small>${d}</small></div>${k === 'update' && upd ? '<em class="bdg">1</em>' : ''}</div>`); e.onclick = () => { pkState.setTab = k; pkState.setQ = ''; go('settings'); }; $('#sn').append(e); });
+  const sq = $('#sq'); sq.oninput = debounce(() => { pkState.setQ = sq.value; const sc = $('#main').scrollTop; go('settings'); $('#main').scrollTop = sc; const n = $('#sq'); n.focus(); n.setSelectionRange(n.value.length, n.value.length); }, 200);
+  const B = $('#sb');
+  if (q.trim()) return settingsSearch(B, q.trim().toLowerCase());
+  const [, tl, ti, td] = SET_TABS.find((x) => x[0] === tab) || SET_TABS[0];
+  B.append(h(`<div class="set-h"><span>${ti}</span><div><h3>${tl}</h3><small>${td}</small></div></div>`));
+  renderSetTab(tab, B);
+};
+function settingsSearch(B, q) {
+  const words = q.split(/\s+/); let hits = 0;
+  SET_TABS.filter(([k]) => k !== 'about').forEach(([k, l, i]) => {
+    const tmp = document.createElement('div'); try { renderSetTab(k, tmp); } catch {}
+    const rows = [...tmp.querySelectorAll('.sr')].filter((r) => { const tx = (r.querySelector('.sr-l') || r).textContent.toLowerCase() + ' ' + l.toLowerCase(); return words.every((w) => tx.includes(w)); });
+    if (!rows.length) return; hits += rows.length;
+    const g = group(B, `${i} ${l}`); rows.forEach((r) => g.append(r));
+    const more = h(`<button class="st-all" style="margin:-12px 4px 18px">Alle ${esc(l)}-Einstellungen öffnen ›</button>`); more.onclick = () => { pkState.setTab = k; pkState.setQ = ''; go('settings'); }; B.append(more);
+  });
+  if (!hits) B.append(h(`<div class="hint">Nichts gefunden für «${esc(q)}». Versuch ein anderes Wort, zum Beispiel <b>Update</b>, <b>Farbe</b>, <b>Start</b> oder <b>PIN</b>.</div>`));
+}
+function renderSetTab(tab, B) {
+  const S = S_();
   if (tab === 'general') {
     let g = group(B, 'Allgemein');
     srow(g, t('st.language'), '', selEl([['de', 'Deutsch'], ['en', 'English'], ['ru', 'Русский']], S.lang, (v) => setS({ lang: v })));
@@ -468,7 +505,7 @@ PAGES.settings = (m) => {
     api.onUpdProgress((p) => { const i = $('#upb i'); if (i) i.style.width = Math.round(p * 100) + '%'; });
     api.updInfo().then((x) => { $('#uv', box).textContent = 'Version ' + x.version + (x.repo ? ' · github.com/' + x.repo : ''); show(x.last || (u.at ? u : null)); });
     const g = group(B, 'Einstellungen', 'Updates kommen aus dem GitHub-Repository der App. Deine Widgets und Einstellungen bleiben beim Update erhalten.');
-    srow(g, 'Automatisch nach Updates suchen', 'Beim Start und alle 6 Stunden', tg(S.autoUpdateCheck !== false, (v) => setS({ autoUpdateCheck: v })));
+    srow(g, 'Automatisch nach Updates suchen', 'Beim Start und danach jede Stunde', tg(S.autoUpdateCheck !== false, (v) => setS({ autoUpdateCheck: v })));
     const rp = h(`<input type="text" placeholder="besitzer/repository" value="${esc(S.updateRepo || '')}" style="width:220px">`); rp.onchange = () => setS({ updateRepo: rp.value.trim() });
     srow(g, 'Update-Quelle', 'Leer lassen für die Standard-Quelle', rp);
   }
@@ -513,6 +550,7 @@ PAGES.settings = (m) => {
     srow(rs, 'Auf Standard zurücksetzen', 'Stellt die ursprünglichen Knöpfe wieder her', btn('Zurücksetzen', () => { tb.items = structuredClone(TBD.items); save(); }));
   }
   if (tab === 'look') {
+    { const g0 = group(B, 'Fenster'); srow(g0, 'Fensterknöpfe', 'Minimieren, Maximieren und Schliessen', seg([['win', 'Windows (rechts)'], ['mac', 'Mac (links, farbig)']], S.winButtons || 'win', async (v) => { await setS({ winButtons: v }); applyWinButtons(); })); }
     const at = () => ({ ...(cfg.appTheme || { mode: 'dark', accent: '#0a84ff' }) });
     const setT = async (p) => { cfg.appTheme = { ...at(), ...p }; applyAppTheme(); await api.patch('appTheme', cfg.appTheme); go('settings'); };
     let g = group(B, 'App');
@@ -714,6 +752,7 @@ PAGES.sw = (m) => {
 
 api.getCfg().then((c) => { cfg = c; selId = cfg.ui?.selId || null; applyAppTheme(); applyLang(); go(location.hash.slice(1) || (cfg.settings && cfg.settings.startPage) || 'home'); });
 api.onCfg((c) => {
+  setTimeout(applyWinButtons, 0);
   const langChanged = cfg && cfg.settings.lang !== c.settings.lang, lockChanged = cfg && !!(cfg.runtime || {}).locked !== !!(c.runtime || {}).locked; cfg = c; if (langChanged) { applyLang(); return go(page); }
   if (lockChanged) return go(isLocked() ? 'home' : (page === 'unlock' ? 'home' : page));
   if (page === 'tasks') { renderTaskLists(); return; }
@@ -721,7 +760,7 @@ api.onCfg((c) => {
   if (page === 'iphone' && !typing) return go('iphone');
   if (!typing && ['home', 'widgets', 'layouts', 'settings'].includes(page)) { const sc = $('#main').scrollTop; go(page); $('#main').scrollTop = sc; $('#main').classList.remove('fade'); }
 });
-api.onNavigate((p) => { if (p === 'tbsettings') { pkState.setTab = 'topbar'; return go(isLocked() ? 'unlock' : 'settings'); } go(p); });
+api.onNavigate((p) => { if (p === 'updates') { pkState.setTab = 'update'; pkState.setQ = ''; return go(isLocked() ? 'unlock' : 'settings'); } if (p === 'tbsettings') { pkState.setTab = 'topbar'; return go(isLocked() ? 'unlock' : 'settings'); } go(p); });
 // Fensterknöpfe (rot/gelb/grün) – steuern nur dieses Fenster
 ['r:close', 'y:min', 'g:max'].forEach((x) => { const [k, a] = x.split(':'); const b = document.getElementById('tl-' + k); if (b) b.onclick = (e) => api.winCtl(a === 'max' && e.altKey ? 'full' : a); });
-api.onWinState((st) => document.body.classList.toggle('maxed', st.max || st.full));
+api.onWinState((st) => { document.body.classList.toggle('maxed', st.max || st.full); applyWinButtons(); });
