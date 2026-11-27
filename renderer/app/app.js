@@ -455,15 +455,15 @@ PAGES.home = (m) => {
 
 const SET_TABS = [['general', 'Allgemein', '⚙️', 'Sprache, Name und Start mit Windows'], ['update', 'Software-Update', '⬆️', 'Neue Versionen installieren'], ['look', 'Darstellung', '🎨', 'Hell oder dunkel, Farbe und Fensterknöpfe'],
   ['desktop', 'Widgets & Desktop', '🖥️', 'Raster, Verhalten und Dock'], ['topbar', 'Shortcut-Leiste', '⌨️', 'Leiste am oberen Bildschirmrand'], ['units', 'Wetter & Einheiten', '🌤️', 'Ort, Temperatur und Uhrzeit'],
-  ['accounts', 'Kalender & Konten', '📅', 'Google Kalender und iCloud'], ['guest', 'Gäste-Modus', '👥', 'App mit PIN für andere sperren'], ['data', 'Daten & Sicherung', '💾', 'Sichern, wiederherstellen, zurücksetzen'], ['about', 'Über', 'ℹ️', 'Version und Hilfe']];
+  ['accounts', 'Kalender & Konten', '📅', 'Google Kalender und iCloud'], ['guest', 'Gäste-Modus', '👥', 'App mit PIN für andere sperren'], ['data', 'Daten & Sicherung', '💾', 'Deine Einstellungen als Datei sichern'], ['support', 'Support', '🛠️', 'Für Entwickler und Hilfe, mit PIN'], ['about', 'Über', 'ℹ️', 'Version und Hilfe']];
 PAGES.settings = (m) => {
   const tab = pkState.setTab || 'general', upd = cfg.update && cfg.update.available, q = pkState.setQ || '';
-  m.innerHTML = `<div class="set-top"><div><h2>${t('st.title')}</h2><p class="sub">Änderungen werden sofort gespeichert.</p></div>${isAdmin() ? '<button id="alk" title="Admin-Bereiche wieder sperren">🔓 Admin aktiv · Sperren</button>' : ''}<div class="set-q"><span>🔍</span><input type="search" id="sq" placeholder="Einstellung suchen …" value="${esc(q)}"></div></div>
+  m.innerHTML = `<div class="set-top"><div><h2>${t('st.title')}</h2><p class="sub">Änderungen werden sofort gespeichert.</p></div>${isAdmin() ? '<button id="alk" title="Admin-Bereiche wieder sperren">🔓 Support offen · Sperren</button>' : ''}<div class="set-q"><span>🔍</span><input type="search" id="sq" placeholder="Einstellung suchen …" value="${esc(q)}"></div></div>
     ${upd && !(tab === 'update' && !q) ? `<div class="hm-up set-up" id="sup"><span>⬆️</span><div style="flex:1"><b>Update auf Version ${esc(cfg.update.latest)} verfügbar</b><small>Mit einem Klick installieren. Deine Widgets und Einstellungen bleiben erhalten.</small></div><button class="p">Jetzt aktualisieren</button></div>` : ''}
     <div class="set"><div class="set-n" id="sn"></div><div class="set-b" id="sb"></div></div>`;
   if ($('#alk')) $('#alk').onclick = () => api.lockRelock();
   if ($('#sup')) $('#sup').onclick = () => { pkState.setTab = 'update'; pkState.setQ = ''; go('settings'); };
-  SET_TABS.forEach(([k, l, i, d]) => { const e = h(`<div class="set-i ${k === tab && !q ? 'on' : ''}"><span>${i}</span><div class="set-il"><b>${l}</b><small>${d}</small></div>${k === 'update' && upd ? '<em class="bdg">1</em>' : ''}${ADMIN_TABS.includes(k) && !isAdmin() ? '<em class="set-lk" title="Admin-PIN nötig">🔒</em>' : ''}</div>`); e.onclick = () => { pkState.setTab = k; pkState.setQ = ''; go('settings'); }; $('#sn').append(e); });
+  SET_TABS.forEach(([k, l, i, d]) => { const e = h(`<div class="set-i ${k === tab && !q ? 'on' : ''}"><span>${i}</span><div class="set-il"><b>${l}</b><small>${d}</small></div>${k === 'update' && upd ? '<em class="bdg">1</em>' : ''}${ADMIN_TABS.includes(k) && !isAdmin() ? '<em class="set-lk" title="Support-PIN nötig">🔒</em>' : ''}</div>`); e.onclick = () => { pkState.setTab = k; pkState.setQ = ''; go('settings'); }; $('#sn').append(e); });
   const sq = $('#sq'); sq.oninput = debounce(() => { pkState.setQ = sq.value; const sc = $('#main').scrollTop; go('settings'); $('#main').scrollTop = sc; const n = $('#sq'); n.focus(); n.setSelectionRange(n.value.length, n.value.length); }, 200);
   const B = $('#sb');
   if (q.trim()) return settingsSearch(B, q.trim().toLowerCase());
@@ -482,7 +482,7 @@ function settingsSearch(B, q) {
   });
   if (!hits) B.append(h(`<div class="hint">Nichts gefunden für «${esc(q)}». Versuch ein anderes Wort, zum Beispiel <b>Update</b>, <b>Farbe</b>, <b>Start</b> oder <b>PIN</b>.</div>`));
 }
-const ADMIN_TABS = ['accounts', 'guest', 'data'];
+const ADMIN_TABS = ['guest', 'support'];
 const isAdmin = () => !!(cfg && cfg.runtime && cfg.runtime.admin);
 function renderSetTab(tab, B) {
   if (ADMIN_TABS.includes(tab) && !isAdmin()) return adminGate(B);
@@ -508,11 +508,7 @@ function renderSetTab(tab, B) {
     };
     api.onUpdProgress((p) => { const i = $('#upb i'); if (i) i.style.width = Math.round(p * 100) + '%'; });
     api.updInfo().then((x) => { $('#uv', box).textContent = 'Version ' + x.version + (x.repo ? ' · github.com/' + x.repo : ''); show(x.last || (u.at ? u : null)); });
-    if (!isAdmin()) { const ga = group(B, 'Einstellungen'); srow(ga, '🔒 Update-Einstellungen', 'Nur mit Admin-PIN änderbar', btn('Entsperren', () => { pkState.setTab = 'update'; pkState.adminAsk = true; go('settings'); })); if (pkState.adminAsk) { pkState.adminAsk = false; adminGate(B); } return; }
-    const g = group(B, 'Einstellungen', 'Updates kommen aus dem GitHub-Repository der App. Deine Widgets und Einstellungen bleiben beim Update erhalten.');
-    srow(g, 'Automatisch nach Updates suchen', 'Beim Start und danach jede Stunde', tg(S.autoUpdateCheck !== false, (v) => setS({ autoUpdateCheck: v })));
-    const rp = h(`<input type="text" placeholder="besitzer/repository" value="${esc(S.updateRepo || '')}" style="width:220px">`); rp.onchange = () => setS({ updateRepo: rp.value.trim() });
-    srow(g, 'Update-Quelle', 'Leer lassen für die Standard-Quelle', rp);
+    B.append(h('<div class="hint" style="margin-top:4px">Deine Widgets und Einstellungen bleiben beim Update erhalten. Die App sucht beim Start und danach jede Stunde automatisch nach Updates.</div>'));
   }
   if (tab === 'topbar') {
     const TBD = { enabled: false, delay: 250, size: 'normal', clock: true, corner: false, items: ['store', 'toggleWidgets', 'showDesktop', 'explorer', 'downloads', 'calc', 'snip', 'clipboard', 'play', 'mute', 'wifi', 'settings', 'lock'].map((a) => ({ id: 'tb-' + a, kind: 'action', action: a })) };
@@ -609,14 +605,11 @@ function renderSetTab(tab, B) {
     srow(g, '☁️ iCloud', ca.connected ? 'Verbunden' + (cfg.icloudUser ? ' als ' + esc(cfg.icloudUser) : '') : 'Nicht verbunden', btn(ca.connected ? 'Verwalten' : 'Verbinden', () => go('iphone'), ca.connected ? '' : 'p'));
   }
   if (tab === 'data') {
-    let g = group(B, 'Sicherung');
+    const g = group(B, 'Sicherung', 'Wiederherstellen und Zurücksetzen gibt es unter Support, damit nichts aus Versehen kaputtgeht.');
     const msg = h('<span class="dim"></span>');
-    srow(g, t('st.export'), 'Alle Widgets, Designs und Einstellungen als Datei', btn('Exportieren …', async () => { const r = await api.exportCfg(); msg.textContent = r.ok ? t('st.exported') : r.canceled ? '' : r.error; }));
-    srow(g, t('st.import'), 'Eine gesicherte Datei laden', [msg, btn('Importieren …', async () => { const r = await api.importCfg(); msg.textContent = r.ok ? t('st.imported') : r.canceled ? '' : t('st.importFail'); })]);
-    srow(g, 'Daten-Ordner', 'Hier liegt die Konfiguration', btn('Öffnen', () => api.openDataFolder()));
-    g = group(B, 'Zurücksetzen', 'Setzt alle Widgets, Designs und Einstellungen auf den Anfang zurück. Das kann nicht rückgängig gemacht werden.');
-    srow(g, 'Alles zurücksetzen', '', btn('Zurücksetzen …', async () => { if (await api.resetAll()) go('home'); }, 'dg'));
+    srow(g, t('st.export'), 'Alle Widgets, Designs und Einstellungen als Datei', [msg, btn('Exportieren …', async () => { const r = await api.exportCfg(); msg.textContent = r && r.ok ? t('st.exported') : r && !r.canceled ? r.error : ''; })]);
   }
+  if (tab === 'support') supportSettings(B, S);
   if (tab === 'guest') guestSettings(B);
   if (tab === 'about') {
     B.append(h(`<div class="ab"><img src="../../assets/icon.png" alt=""><h3>Jafy Widgets</h3><div class="dim">Version <span id="abv"></span> · ${storeList().length} Widgets im Store</div><div class="dim" style="margin-top:10px">made by Arsenii and Fynn</div></div>`));

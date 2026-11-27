@@ -37,8 +37,8 @@ function pushBottom(win) { // Widget unter alle anderen Fenster legen (Desktop-M
 let lockUnlocked = false;
 const isLocked = () => !!(cfg && cfg.lock && cfg.lock.enabled && !lockUnlocked);
 const isAdmin = () => lockUnlocked; // Admin-PIN in dieser Sitzung eingegeben
-// Nur mit Admin-PIN (Standard-PIN): Daten, Sicherung, Konten, Update-Quelle, Gäste-Modus
-const ADMIN_BLOCK = new Set(['app:reset', 'app:openData', 'cfg:import', 'cfg:export', 'icloud:connect', 'icloud:disconnect', 'gcal:set', 'lock:setup', 'lock:allow', 'lock:changePin', 'lock:disable']);
+// Nur mit Entwickler-/Support-PIN (Standard-PIN): Zurücksetzen, Import, Daten-Ordner, Update-Quelle, Entwickler-Tools, Gäste-Modus
+const ADMIN_BLOCK = new Set(['app:reset', 'app:openData', 'cfg:import', 'dev:tools', 'dev:log', 'lock:setup', 'lock:allow', 'lock:changePin', 'lock:disable']);
 const LOCK_BLOCK = new Set(['widget:add', 'widget:update', 'widget:remove', 'widget:duplicate', 'widget:toDisplay', 'widgets:allOnTop', 'widgets:allVisible', 'layout:save', 'layout:apply',
   'drag:begin', 'widget:menu', 'autostart:set', 'app:reset', 'app:openData', 'cfg:import', 'cfg:export', 'icloud:connect', 'icloud:disconnect', 'gcal:set', 'gcal:sync',
   'dock:reorder', 'dock:remove', 'dock:addPath', 'dock:pickApp', 'dock:itemMenu', 'tb:pickApp', 'upd:install', 'focus:set', 'pick:folder', 'pick:image']);
@@ -216,7 +216,7 @@ ipcMain.handle('cfg:get', () => pubCfg());
 ipcMain.handle('cfg:patch', (_e, key, value) => {
   if (!['settings', 'theme', 'layouts', 'templates', 'appTheme', 'ui', 'dock', 'appearance', 'topbar'].includes(key)) return;
   if (isLocked() && key !== 'ui') return pubCfg();
-  if (key === 'settings' && !isAdmin()) { const o = cfg.settings || {}; value = { ...value, updateRepo: o.updateRepo, autoUpdateCheck: o.autoUpdateCheck, icalUrls: o.icalUrls }; }
+  if (key === 'settings' && !isAdmin()) { const o = cfg.settings || {}; value = { ...value, updateRepo: o.updateRepo, autoUpdateCheck: o.autoUpdateCheck }; }
   if (key === 'settings') clipEnsure(value);
   cfg[key] = value; if (key === 'settings') { applyAutostart(); updateTray(); } if (key === 'dock') applyDock(); if (key === 'topbar' || key === 'theme' || key === 'appTheme') applyTopbar(); if (key === 'appearance') { lastNight = null; scheduleTick(); followWallpaper(); } reconcile(); return pubCfg();
 });
@@ -972,3 +972,8 @@ ipcMain.handle('lock:relock', () => { lockUnlocked = false; lockApply(); if (mai
 ipcMain.handle('lock:allow', (_e, allow) => { cfg.lock = cfg.lock || {}; cfg.lock.allow = { ...LOCK_ALLOW_DEFAULT, ...(allow || {}) }; saveCfg(); lockApply(); return true; });
 ipcMain.handle('lock:changePin', (_e, pin) => { if (!/^\d{4,8}$/.test(String(pin))) return false; cfg.lock = cfg.lock || {}; cfg.lock.salt = crypto.randomBytes(16).toString('hex'); cfg.lock.hash = pinHash(pin, cfg.lock.salt); saveCfg(); lockApply(); return true; });
 ipcMain.handle('lock:disable', () => { cfg.lock = { ...(cfg.lock || {}), enabled: false }; lockUnlocked = false; saveCfg(); lockApply(); return true; });
+
+// ---------- Support / Entwickler ----------
+ipcMain.handle('dev:tools', () => { if (mainWin && !mainWin.isDestroyed()) mainWin.webContents.openDevTools({ mode: 'detach' }); return true; });
+ipcMain.handle('dev:log', () => { const f = path.join(app.getPath('userData'), 'log.txt'); if (!fs.existsSync(f)) fs.writeFileSync(f, ''); shell.openPath(f); return true; });
+ipcMain.handle('dev:diag', () => ({ app: app.getVersion(), electron: process.versions.electron, os: (os.version ? os.version() : os.type()) + ' ' + os.release() + ' ' + os.arch(), data: app.getPath('userData'), exe: app.getPath('exe'), repo: updRepo(), update: cfg.update || null, widgets: cfg.widgets.length, guest: !!(cfg.lock && cfg.lock.enabled), lang: cfg.settings.lang }));

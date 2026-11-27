@@ -52,5 +52,6 @@ contextBridge.exposeInMainWorld('api', {
   gcalSet: (u) => inv('gcal:set', u), gcalSync: () => inv('gcal:sync'), gcalOpen: () => inv('gcal:open'), fySys: () => inv('fy:sysinfo'),
   toolCopyImage: (u) => inv('tool:copyImage', u), toolSavePng: (u, n) => inv('tool:savePng', u, n), toolSys: () => inv('tool:sys'),
   lockSetup: (allow) => inv('lock:setup', allow), lockUnlock: (pin) => inv('lock:unlock', pin), lockRelock: () => inv('lock:relock'), lockAllow: (a) => inv('lock:allow', a), lockChangePin: (pin) => inv('lock:changePin', pin), lockDisable: () => inv('lock:disable'),
+  devTools: () => inv('dev:tools'), devLog: () => inv('dev:log'), devDiag: () => inv('dev:diag'),
   temp: () => inv('temp:get'), screentime: () => inv('screentime:get'),
 });
