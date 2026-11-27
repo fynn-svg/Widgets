@@ -72,7 +72,7 @@ function supportSettings(B, S) {
   srow(g2, 'Daten-Ordner', 'Hier liegen Konfiguration und Protokoll', btn('Öffnen', () => api.openDataFolder()));
   srow(g2, 'Alles zurücksetzen', '', btn('Zurücksetzen …', async () => { if (await api.resetAll()) go('home'); }, 'dg'));
   const g3 = group(B, 'Support-PIN', 'Die PIN schützt diesen Bereich und den Gäste-Modus. Nach der Eingabe bleibt alles offen, bis das Fenster geschlossen wird.');
-  if (def) srow(g3, '⚠️ Standard-PIN aktiv', 'Auf diesem PC kann man sie ändern', null);
+  if (def) srow(g3, '⚠️ Standard-PIN aktiv', 'Ändere sie, damit nur du sie kennst', null);
   const np = h('<input type="password" inputmode="numeric" maxlength="8" placeholder="Neue PIN" style="width:120px">'), np2 = h('<input type="password" inputmode="numeric" maxlength="8" placeholder="Wiederholen" style="width:120px">'), pm = h('<span class="dim"></span>');
   srow(g3, 'PIN ändern', '4 bis 8 Ziffern', [pm, np, np2, btn('Ändern', async () => { if (!/^\d{4,8}$/.test(np.value)) { pm.textContent = 'Nur 4 bis 8 Ziffern. '; return; } if (np.value !== np2.value) { pm.textContent = 'Nicht gleich. '; return; } if (await api.lockChangePin(np.value)) { np.value = np2.value = ''; pm.textContent = '✓ Geändert '; } })]);
   srow(g3, 'Support wieder sperren', '', btn('🔒 Jetzt sperren', () => api.lockRelock()));

@@ -62,3 +62,16 @@ jobs:
           gh release create "v${{ steps.v.outputs.version }}" dist/JafyWidgets-Setup.exe --title "Jafy Widgets ${{ steps.v.outputs.version }}" --notes "$NOTES"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Alte Release-Texte bereinigen (keine PIN-Ziffern)
+        if: always()
+        continue-on-error: true
+        shell: bash
+        run: |
+          for tag in $(gh release list --limit 50 --json tagName --jq '.[].tagName'); do
+            body=$(gh release view "$tag" --json body --jq .body)
+            clean=$(printf '%s' "$body" | sed -E 's/ ?\((Standard[- ]?)?PIN [0-9]{4,8}\)//g; s/ ?\(Standard [0-9]{4,8}\)//g; s/PIN [0-9]{4,8}/PIN/g')
+            if [ "$body" != "$clean" ]; then gh release edit "$tag" --notes "$clean"; echo "bereinigt: $tag"; fi
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

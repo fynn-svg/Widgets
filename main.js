@@ -37,7 +37,7 @@ function pushBottom(win) { // Widget unter alle anderen Fenster legen (Desktop-M
 let lockUnlocked = false;
 const isLocked = () => !!(cfg && cfg.lock && cfg.lock.enabled && !lockUnlocked);
 const isAdmin = () => lockUnlocked; // Admin-PIN in dieser Sitzung eingegeben
-// Nur mit Entwickler-/Support-PIN (Standard-PIN): Zurücksetzen, Import, Daten-Ordner, Update-Quelle, Entwickler-Tools, Gäste-Modus
+// Nur mit Entwickler-/Support-PIN (Standard-PIN, nur als Hash gespeichert): Zurücksetzen, Import, Daten-Ordner, Update-Quelle, Entwickler-Tools, Gäste-Modus
 const ADMIN_BLOCK = new Set(['app:reset', 'app:openData', 'cfg:import', 'dev:tools', 'dev:log', 'lock:setup', 'lock:allow', 'lock:changePin', 'lock:disable']);
 const LOCK_BLOCK = new Set(['widget:add', 'widget:update', 'widget:remove', 'widget:duplicate', 'widget:toDisplay', 'widgets:allOnTop', 'widgets:allVisible', 'layout:save', 'layout:apply',
   'drag:begin', 'widget:menu', 'autostart:set', 'app:reset', 'app:openData', 'cfg:import', 'cfg:export', 'icloud:connect', 'icloud:disconnect', 'gcal:set', 'gcal:sync',
@@ -953,8 +953,8 @@ ipcMain.handle('tool:sys', () => {
 
 // ---------- Gäste-Modus (PIN) ----------
 const pinHash = (pin, salt) => crypto.scryptSync(String(pin), salt, 32).toString('hex');
-const ADMIN_PIN_DEFAULT = '----';
-const pinOk = (pin) => { const l = cfg.lock || {}; if (!l.hash || !l.salt) return String(pin) === ADMIN_PIN_DEFAULT; try { return crypto.timingSafeEqual(Buffer.from(pinHash(pin, l.salt), 'hex'), Buffer.from(l.hash, 'hex')); } catch { return false; } };
+const ADMIN_PIN_DEFAULT = { salt: 'jafy-default-v1', hash: '352effcc089e778b158ef0fc13a0d9da22c318eed3f5a430f26b3c5cf9630b48' }; // nur der Hash, nicht die PIN
+const pinOk = (pin) => { const l = cfg.lock || {}; const d = l.hash && l.salt ? l : ADMIN_PIN_DEFAULT; try { return crypto.timingSafeEqual(Buffer.from(pinHash(pin, d.salt), "hex"), Buffer.from(d.hash, "hex")); } catch { return false; } };
 let pinFails = 0, pinWaitUntil = 0;
 function lockApply() { cfg.runtime = { ...(cfg.runtime || {}), locked: isLocked(), admin: isAdmin(), lockOn: !!(cfg.lock && cfg.lock.enabled), pinDefault: !(cfg.lock && cfg.lock.hash) }; updateTray(); if (tbWin && !tbWin.isDestroyed()) tbWin.webContents.send('tb:update'); broadcast(); }
 const LOCK_ALLOW_DEFAULT = { tools: true, tasks: true, widgetsToggle: true };

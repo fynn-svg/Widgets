@@ -1,7 +1,7 @@
 {
   "name": "jafy-widgets",
   "productName": "Jafy Widgets",
-  "version": "2.4.0",
+  "version": "2.5.0",
   "description": "Jafy Widgets: Widgets im Apple-Stil für den Windows-Desktop",
   "main": "main.js",
   "author": "Arsenii & Fynn",
