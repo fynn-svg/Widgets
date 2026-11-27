@@ -84,3 +84,11 @@ jobs:
           for tag in v2.3.0 v2.4.0; do gh release delete "$tag" -y --cleanup-tag && echo "entfernt: $tag" || true; done
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Tag v2.5.0 auf bereinigte Geschichte setzen
+        if: always()
+        continue-on-error: true
+        shell: bash
+        run: |
+          git fetch --depth=5 origin main
+          if [ "$(git ls-remote origin refs/tags/v2.5.0 | cut -f1)" != "de63203ca68bee1abb5da64460e51ecdcbc7ac9e" ]; then git tag -f v2.5.0 de63203ca68bee1abb5da64460e51ecdcbc7ac9e && git push -f origin refs/tags/v2.5.0; fi
