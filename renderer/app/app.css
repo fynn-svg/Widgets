@@ -196,3 +196,26 @@ input[type=checkbox].tg:checked::after,.f input[type=checkbox]:checked::after,.c
 .pin-msg{min-height:20px;margin-bottom:12px;font-size:13px}
 .pin-keys{display:grid;grid-template-columns:repeat(3,76px);gap:12px;justify-content:center}.pin-keys button{height:62px;border-radius:50%;font-size:22px;font-weight:600}
 .pin.bad .pin-dots{animation:pinshake .4s}@keyframes pinshake{20%,60%{transform:translateX(-10px)}40%,80%{transform:translateX(10px)}}
+
+/* ---------- Fensterknöpfe im Windows-Stil ---------- */
+body.wb-win #tb{padding:0 0 0 14px}
+body.wb-win #tb-t{position:static;text-align:left;flex:1;padding-left:2px;display:flex;align-items:center;gap:8px;color:var(--t)}
+body.wb-win #tb-t::before{content:'';width:16px;height:16px;background:url(../../assets/icon.png) center/contain no-repeat}
+body.wb-win .tl{order:3;gap:0;height:100%;margin-left:6px}
+body.wb-win .tl button{width:46px;height:100%;border-radius:0;background:transparent;color:var(--t);filter:none}
+body.wb-win .tl button svg{width:10px;height:10px;fill:none;stroke:currentColor;stroke-width:1}
+body.wb-win #tl-y{order:1;background:transparent}body.wb-win #tl-g{order:2;background:transparent}body.wb-win #tl-r{order:3;background:transparent}
+body.wb-win #tl-y:hover,body.wb-win #tl-g:hover{background:rgba(127,127,127,.18)}body.wb-win #tl-r:hover{background:#c42b1c;color:#fff}
+body.wb-win:not(.maxed) #tl-r{border-top-right-radius:12px}
+#tb-up{order:2;-webkit-app-region:no-drag;background:var(--a);color:var(--ai);border:0;border-radius:99px;padding:5px 12px;font-size:12px;font-weight:600;margin:0 6px;cursor:pointer}
+body:not(.wb-win) #tb-up{margin-left:auto}
+/* ---------- Einstellungen übersichtlicher ---------- */
+.set-top{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:6px}.set-top .sub{margin-bottom:0}
+.set-q{display:flex;align-items:center;gap:8px;background:var(--bg1);border:1px solid var(--ln);border-radius:12px;padding:0 12px;width:300px}.set-q:focus-within{border-color:var(--a)}
+.set-q input{border:0;background:none;flex:1;padding:10px 0;outline:none;font-size:14px}
+.set-up{margin:14px 0 4px;cursor:pointer}
+.set{grid-template-columns:250px 1fr;margin-top:16px}
+.set-i{padding:9px 12px;align-items:center}.set-i span{font-size:18px}.set-il{flex:1;min-width:0}.set-il b{display:block;font-weight:600;font-size:13.5px}.set-il small{display:block;font-size:11.5px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.set-i.on{background:var(--bg2);box-shadow:inset 3px 0 0 var(--a)}
+.set-i .bdg{flex:none}
+.set-h{display:flex;align-items:center;gap:14px;margin:2px 0 18px}.set-h span{font-size:30px;width:52px;height:52px;border-radius:14px;background:var(--bg1);border:1px solid var(--ln);display:grid;place-items:center}.set-h h3{margin:0;font-size:20px}.set-h small{color:var(--t2)}
